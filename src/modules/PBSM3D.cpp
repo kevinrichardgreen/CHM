@@ -1458,6 +1458,39 @@ if (suspension_present) {
     b.switch_memory_context(gpu_ctx);
 #endif
 
+    ofstream outFileC;
+    outFileC.open("C.mm");
+    outFileC << "%%MatrixMarket matrix coordinate real general\n"
+             << "% Suspension system matrix\n";
+    outFileC << vl_C.size1() << " " << vl_C.size2() << " " << vl_C.nnz() << "\n";
+
+    // Note 1-based indices for MatrixMarket format
+    size_t entry = 0;
+    for (unsigned int row = 0; row < vl_C.size1(); ++row)
+    {
+        for (unsigned int col = row_buffer[row]; col < row_buffer[row + 1]; ++col)
+        {
+            outFileC << " " << row + 1 << " " << col_buffer[entry] + 1 << " " << std::setprecision(17)
+                     << elements[entry] << "\n";
+            ++entry;
+        }
+    }
+    outFileC.close();
+
+    ofstream outFileCrhs;
+    outFileCrhs.open("Crhs.mm");
+    outFileCrhs << "%%MatrixMarket matrix array real general\n"
+                << "% Suspension system right hand side\n";
+    outFileCrhs << b.size() << " 1\n";
+    for (unsigned int row = 0; row < b.size(); ++row)
+    {
+        outFileCrhs << b[row] << "\n";
+    }
+    outFileCrhs.close();
+
+    // Load into Trilinos and solve
+    // ...
+
     // This solves the steady-state suspension layer concentration
 
     // configuration of preconditioner:
@@ -1653,6 +1686,39 @@ if (suspension_present) {
     vl_A.switch_memory_context(gpu_ctx);
     bb.switch_memory_context(gpu_ctx);
 #endif
+
+    ofstream outFileA;
+    outFileA.open("A.mm");
+    outFileA << "%%MatrixMarket matrix coordinate real general\n"
+             << "% Deposition flux system matrix\n";
+    outFileA << vl_A.size1() << " " << vl_A.size2() << " " << vl_A.nnz() << "\n";
+
+    // Note 1-based indices for MatrixMarket format
+    entry = 0;
+    for (unsigned int row = 0; row < vl_A.size1(); ++row)
+    {
+        for (unsigned int col = row_buffer[row]; col < row_buffer[row + 1]; ++col)
+        {
+            outFileA << " " << row + 1 << " " << col_buffer[entry] + 1 << " " << std::setprecision(17)
+                     << elements[entry] << "\n";
+            ++entry;
+        }
+    }
+    outFileA.close();
+
+    ofstream outFileArhs;
+    outFileArhs.open("Arhs.mm");
+    outFileArhs << "%%MatrixMarket matrix array real general\n"
+                << "% Suspension system right hand side\n";
+    outFileArhs << bb.size() << " 1\n";
+    for (unsigned int row = 0; row < bb.size(); ++row)
+    {
+        outFileArhs << bb[row] << "\n";
+    }
+    outFileArhs.close();
+
+    // Load into Trilinos and solve
+    // ...
 
     //     Solve the deposition flux --> how much drifting there is.
 
