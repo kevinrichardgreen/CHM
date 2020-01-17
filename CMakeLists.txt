@@ -341,8 +341,21 @@ else()
     message(STATUS "gvpr and dot present, module output to pdf will function.")
 endif()
 
+find_package(trilinos REQUIRED)
+if(trilinos_FOUND)
+  message(STATUS "Trilinos has been found")
+  message(STATUS "Trilinos libs: " ${trilinos_LIB_DIRS})
+  message(STATUS "Trilinos include dir: " ${trilinos_INCLUDE_DIRS})
+else()
+  message(ERROR "Trilinos not found. Aborting")
+endif(trilinos_FOUND)
 
 #setup src dirs
 add_subdirectory(src)
+
+if (BUILD_TESTS)
+    message(STATUS "Tests enabled. Run with make check")
+    enable_testing()
+endif()
 
 message(STATUS "${CMAKE_CXX_FLAGS}")

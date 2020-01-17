@@ -150,6 +150,7 @@ set(EXT_TARGETS
 		func::func
 		${ARPACK_LIBRARY}
 		Eigen3::Eigen3
+		trilinos::trilinos
 		CACHE INTERNAL "" FORCE)
 
 #handle the optionals
