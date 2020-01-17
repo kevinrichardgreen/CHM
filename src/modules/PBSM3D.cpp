@@ -452,11 +452,10 @@ void PBSM3D::run(mesh& domain)
 #endif
 
     // zero CSR vector in vl_C
-    viennacl::vector_base<vcl_scalar_type> init_temporary(
-        vl_C.handle(), viennacl::compressed_matrix<vcl_scalar_type>::size_type(nnz + 1), 0, 1);
+    viennacl::vector_base<vcl_scalar_type> init_temporary(vl_C.handle(), MatrixType::size_type(nnz + 1), 0, 1);
     // write:
-    init_temporary = viennacl::zero_vector<vcl_scalar_type>(
-        viennacl::compressed_matrix<vcl_scalar_type>::size_type(nnz + 1), viennacl::traits::context(vl_C));
+    init_temporary =
+        viennacl::zero_vector<vcl_scalar_type>(MatrixType::size_type(nnz + 1), viennacl::traits::context(vl_C));
 
     // zero-fill RHS
     b.clear();
@@ -1555,13 +1554,12 @@ if (suspension_present) {
         viennacl::linalg::host_based::detail::extract_raw_pointer<vcl_scalar_type>(vl_A.handle());
 
     // zero CSR vector in vl_A
-    viennacl::vector_base<vcl_scalar_type> init_temporaryA(
-        vl_A.handle(), viennacl::compressed_matrix<vcl_scalar_type>::size_type(nnz_drift + 1), 0, 1);
+    viennacl::vector_base<vcl_scalar_type> init_temporaryA(vl_A.handle(), MatrixType::size_type(nnz_drift + 1), 0, 1);
     // write:
-    init_temporaryA = viennacl::zero_vector<vcl_scalar_type>(
-        viennacl::compressed_matrix<vcl_scalar_type>::size_type(nnz_drift + 1), viennacl::traits::context(vl_A));
+    init_temporaryA =
+        viennacl::zero_vector<vcl_scalar_type>(MatrixType::size_type(nnz_drift + 1), viennacl::traits::context(vl_A));
 
-//     zero fill RHS for drift
+    //     zero fill RHS for drift
     bb.clear();
 
     saltation_present=false;
@@ -1656,14 +1654,14 @@ if (suspension_present) {
     bb.switch_memory_context(gpu_ctx);
 #endif
 
-//     Solve the deposition flux --> how much drifting there is.
+    //     Solve the deposition flux --> how much drifting there is.
 
-//     configuration of preconditioner:
+    //     configuration of preconditioner:
     viennacl::linalg::chow_patel_tag deposition_flux_chow_patel_config;
     deposition_flux_chow_patel_config.sweeps(3);       //  nonlinear sweeps
     deposition_flux_chow_patel_config.jacobi_iters(2); //  Jacobi iterations per triangular 'solve' Rx=r
-    viennacl::linalg::chow_patel_icc_precond<viennacl::compressed_matrix<vcl_scalar_type>>
-        deposition_flux_chow_patel_icc(vl_A, deposition_flux_chow_patel_config);
+    viennacl::linalg::chow_patel_icc_precond<MatrixType> deposition_flux_chow_patel_icc(
+        vl_A, deposition_flux_chow_patel_config);
 
     // Set up convergence tolerance to have an average value for each unknown
     double deposition_flux_cg_tol = 1e-8;
@@ -1676,9 +1674,8 @@ if (suspension_present) {
 
     // compute result and copy back to CPU device (if an accelerator was used),
     // otherwise access is slow
-    viennacl::vector<vcl_scalar_type> vl_dSdt =
-        viennacl::linalg::solve(vl_A, bb, deposition_flux_custom_cg, deposition_flux_chow_patel_icc);
-    // viennacl::vector<vcl_scalar_type> vl_dSdt = viennacl::linalg::solve(vl_A,
+    VectorType vl_dSdt = viennacl::linalg::solve(vl_A, bb, deposition_flux_custom_cg, deposition_flux_chow_patel_icc);
+    // VectorType vl_dSdt = viennacl::linalg::solve(vl_A,
     // bb, deposition_flux_custom_cg);
     viennacl::copy(vl_dSdt, dSdt);
 

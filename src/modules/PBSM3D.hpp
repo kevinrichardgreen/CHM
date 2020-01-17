@@ -93,6 +93,9 @@ public:
     void run(mesh& domain);
     void init(mesh& domain);
 
+    typedef viennacl::compressed_matrix<vcl_scalar_type> MatrixType;
+    typedef viennacl::vector<vcl_scalar_type> VectorType;
+
     double nLayer;
     double susp_depth;
     double v_edge_height;
@@ -130,14 +133,14 @@ public:
     double dv; //stalk diameter
 
     // this is the suspension transport matrix
-    double nnz; //number none zero
-    viennacl::compressed_matrix<vcl_scalar_type>  vl_C;
-    viennacl::vector<vcl_scalar_type> b;
+    double nnz; // number none zero
+    MatrixType vl_C;
+    VectorType b;
 
-    //this is the drift matrix
-    double nnz_drift; //number none zero
-    viennacl::compressed_matrix<vcl_scalar_type>  vl_A;
-    viennacl::vector<vcl_scalar_type> bb;
+    // this is the drift matrix
+    double nnz_drift; // number none zero
+    MatrixType vl_A;
+    VectorType bb;
 
     bool debug_output;
     double cutoff; // cutoff veg-snow diff (m) that we inhibit saltation entirely
