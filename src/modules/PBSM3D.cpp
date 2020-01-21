@@ -424,6 +424,8 @@ void PBSM3D::init(mesh& domain)
     viennacl::copy(C, vl_C); // copy C -> vl_C, sets up the sparsity pattern
     viennacl::copy(A, vl_A); // copy A -> vl_A, sets up the sparsity pattern
 
+    // Set up Trilinos mat sparsity here
+
     b.resize(ntri * nLayer);
     bb.resize(ntri);
     nnz = vl_C.nnz();
@@ -722,7 +724,6 @@ void PBSM3D::run(mesh& domain)
             // This is the lamdba from Li and Pomeroy eqn 4 that is used to include
             // exposed vegetation w/ the z0 estimate
             double lambda = 0;
-
 
             d->saltation = false; // default case
 
@@ -1489,54 +1490,85 @@ if (suspension_present) {
     outFileCrhs.close();
 
     // Load into Trilinos and solve
-    // ...
+    RCP<const Comm<int> > comm = Tpetra::getDefaultComm ();
 
     // This solves the steady-state suspension layer concentration
 
-    // configuration of preconditioner:
-    viennacl::linalg::ilut_tag ilut_config(20,1e-4); // defaults: 20 entries/row, 1e-4 drop tol
-    viennacl::linalg::ilut_precond<viennacl::compressed_matrix<vcl_scalar_type>> ilut(
-        vl_C, ilut_config);
+    // Read sparse matrix A from Matrix Market file.
+    RCP<crs_matrix_type> tri_C =
+      reader_type::readSparseFile ("C.mm", comm);
+    // Read right-hand side vector(s) B from Matrix Market file.
+    RCP<const map_type> map = tri_C->getRangeMap ();
+    RCP<MV> tri_Crhs = reader_type::readDenseFile ("Crhs.mm", comm, map);
 
-    // Set up convergence tolerance to have an average value for each unknown
-    double suspension_gmres_tol = 1e-8;
-    // Set max iterations and maximum Krylov dimension before restart
-    size_t suspension_gmres_max_iterations = 1000;
-    size_t suspension_gmres_krylov_dimension = 30;
+    // Create Belos iterative linear solver.
+    RCP<solver_type> solver;
+    RCP<ParameterList> solverParams (new ParameterList ());
+    {
+      Belos::SolverFactory<scalar_type, MV, OP> belosFactory;
+      solver = belosFactory.create ("GMRES", solverParams);
+    }
+    if (solver.is_null ()) {
+      if (comm->getRank () == 0) {
+	std::cerr << "Failed to create Belos solver!" << std::endl;
+      }
+      // return EXIT_FAILURE;
+    }
 
-    // compute result and copy back to CPU device (if an accelerator was used),
-    // otherwise access is slow
-    viennacl::linalg::gmres_tag suspension_custom_gmres(suspension_gmres_tol, suspension_gmres_max_iterations,
-                                                        suspension_gmres_krylov_dimension);
-    viennacl::vector<vcl_scalar_type> vl_x = viennacl::linalg::solve(vl_C, b, suspension_custom_gmres, ilut);
-    viennacl::copy(vl_x, x);
+  // Create Ifpack2 preconditioner.
+    RCP<prec_type> M;
+    M = Ifpack2::Factory::create<row_matrix_type> ("ILUT", tri_C);
+    if (M.is_null ()) {
+      if (comm->getRank () == 0) {
+        std::cerr << "Failed to create Ifpack2 preconditioner!" << std::endl;
+      }
+      // return EXIT_FAILURE;
+    }
+    M->initialize ();
+    M->compute ();
 
-    // Log final state of the linear solve
-    LOG_DEBUG << "  Suspension_GMRES # of iterations: " << suspension_custom_gmres.iters();
-    LOG_DEBUG << "  Suspension_GMRES final residual : " << suspension_custom_gmres.error();
+    // Set up the linear problem to solve.
+    RCP<MV> tri_X (new MV (tri_C->getDomainMap (), tri_Crhs->getNumVectors ()));
+    RCP<problem_type> problem;
+    {
+      problem = rcp (new problem_type (tri_C, tri_X, tri_Crhs));
+      if (! M.is_null ()) {
+	problem->setRightPrec (M);
+      }
+      problem->setProblem ();
+      solver->setProblem (problem);
+    }
 
-    /*
-      Dump matrix to ASCII file
-    */
-    //    ofstream ofile;
-    //    ofile.open("C.out");
-    //    ofile << std::setprecision(12) << vl_C;
-    //    ofile.close();
-    //
-    //    ofile.open("b.out");
-    //    ofile << std::setprecision(12) << b;
-    //    ofile.close();
-    //
-    //    ofile.open("x.out");
-    //    ofile << std::setprecision(12) << vl_x;
-    //    ofile.close();
+    // Solve the linear system.
+    {
+      Belos::ReturnType solveResult = solver->solve ();
+      if (solveResult != Belos::Converged) {
+	if (comm->getRank () == 0) {
+	  cerr << "Solve failed to converge!" << endl;
+	}
+	// return EXIT_FAILURE;
+      }
+    }
 
-    // Now we have the concentration, compute the suspension flux
- } else {
-    LOG_DEBUG << "  No suspension present.";
- }
+    auto xArray = tri_X->get1dView();
 
+    // Can iterate over an ArrayRCP.
+    // for (auto it=xArray.begin(); it!=xArray.end(); ++it) {
+    //   std::cout << *it << "\n";
+    // }
+    // OR access by index
+    // for(int i=0; i<xArray.size(); ++i) {
+    //   std::cout << xArray[i] << "\n";
+    // }
+    auto numIters = solver->getNumIters();
+    auto residual = solver->achievedTol();
+    std::cout << "iterations: " << numIters << " residual: " << residual << "\n";
 
+    // Copy the Trilinos data into an std::vector
+    //  std::copy can handle this easily due to iterable nature of Teuchos::ArrayRCP<>
+    //  NOTE this is a serial copy though, look towards parallel STL
+    std::vector<vcl_scalar_type> x(xArray.size());
+    std::copy( xArray.begin(), xArray.end(), x.begin() );
 
 #pragma omp parallel for
     for (size_t i = 0; i < domain->size_faces(); i++)
@@ -1718,36 +1750,73 @@ if (suspension_present) {
     outFileArhs.close();
 
     // Load into Trilinos and solve
-    // ...
 
-    //     Solve the deposition flux --> how much drifting there is.
+    // Read sparse matrix A from Matrix Market file.
+    RCP<crs_matrix_type> tri_A =
+      reader_type::readSparseFile ("A.mm", comm);
+    // Read right-hand side vector(s) B from Matrix Market file.
+    RCP<const map_type> mapA = tri_A->getRangeMap ();
+    RCP<MV> tri_Arhs = reader_type::readDenseFile ("Arhs.mm", comm, mapA);
 
-    //     configuration of preconditioner:
-    viennacl::linalg::chow_patel_tag deposition_flux_chow_patel_config;
-    deposition_flux_chow_patel_config.sweeps(3);       //  nonlinear sweeps
-    deposition_flux_chow_patel_config.jacobi_iters(2); //  Jacobi iterations per triangular 'solve' Rx=r
-    viennacl::linalg::chow_patel_icc_precond<MatrixType> deposition_flux_chow_patel_icc(
-        vl_A, deposition_flux_chow_patel_config);
+    // Create Belos iterative linear solver.
+    RCP<solver_type> deposition_solver;
+    RCP<ParameterList> deposition_solverParams (new ParameterList ());
+    {
+      Belos::SolverFactory<scalar_type, MV, OP> belosFactoryA;
+      deposition_solver = belosFactoryA.create ("GMRES", solverParams);
+    }
+    if (deposition_solver.is_null ()) {
+      if (comm->getRank () == 0) {
+	std::cerr << "Failed to create Belos solver!" << std::endl;
+      }
+      // return EXIT_FAILURE;
+    }
 
-    // Set up convergence tolerance to have an average value for each unknown
-    double deposition_flux_cg_tol = 1e-8;
-    // Set max iterations and maximum Krylov dimension before restart
-    size_t deposition_flux_cg_max_iterations = 500;
+  // Create Ifpack2 preconditioner.
+    RCP<prec_type> M2;
+    M2 = Ifpack2::Factory::create<row_matrix_type> ("ILUT", tri_A);
+    if (M2.is_null ()) {
+      if (comm->getRank () == 0) {
+        std::cerr << "Failed to create Ifpack2 preconditioner!" << std::endl;
+      }
+      // return EXIT_FAILURE;
+    }
+    M2->initialize ();
+    M2->compute ();
 
-    // compute result and copy back to CPU device (if an accelerator was used),
-    // otherwise access is slow
-    viennacl::linalg::cg_tag deposition_flux_custom_cg(deposition_flux_cg_tol, deposition_flux_cg_max_iterations);
+    // Set up the linear problem to solve.
+    RCP<MV> tri_X2 (new MV (tri_A->getDomainMap (), tri_Arhs->getNumVectors ()));
+    RCP<problem_type> problem2;
+    {
+      problem2 = rcp (new problem_type (tri_A, tri_X2, tri_Arhs));
+      if (! M2.is_null ()) {
+	problem2->setRightPrec (M2);
+      }
+      problem2->setProblem ();
+      deposition_solver->setProblem (problem2);
+    }
 
-    // compute result and copy back to CPU device (if an accelerator was used),
-    // otherwise access is slow
-    VectorType vl_dSdt = viennacl::linalg::solve(vl_A, bb, deposition_flux_custom_cg, deposition_flux_chow_patel_icc);
-    // VectorType vl_dSdt = viennacl::linalg::solve(vl_A,
-    // bb, deposition_flux_custom_cg);
-    viennacl::copy(vl_dSdt, dSdt);
+    // Solve the linear system.
+    {
+      Belos::ReturnType solveResult = deposition_solver->solve ();
+      if (solveResult != Belos::Converged) {
+	if (comm->getRank () == 0) {
+	  std::cerr << "Solve failed to converge!" << std::endl;
+	}
+	// return EXIT_FAILURE;
+      }
+    }
 
-    // Log final state of the linear solve
-    LOG_DEBUG << "  deposition_flux_CG # of iterations: " << deposition_flux_custom_cg.iters();
-    LOG_DEBUG << "  deposition_flux_CG final residual : " << deposition_flux_custom_cg.error();
+    numIters = deposition_solver->getNumIters();
+    residual = deposition_solver->achievedTol();
+    std::cout << "deposition iterations: " << numIters << " residual: " << residual << "\n";
+
+    auto x2Array = tri_X2->get1dView();
+    // Copy the Trilinos data into an std::vector
+    //  std::copy can handle this easily due to iterable nature of Teuchos::ArrayRCP<>
+    //  NOTE this is a serial copy though, look towards parallel STL
+    std::vector<vcl_scalar_type> dSdt(x2Array.size());
+    std::copy( x2Array.begin(), x2Array.end(), dSdt.begin() );
 
     } // if saltation_present
     else {

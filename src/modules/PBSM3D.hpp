@@ -62,6 +62,33 @@
 #include <boost/math/tools/tuple.hpp>
 #include <boost/math/tools/roots.hpp>
 
+#include <BelosSolverFactory.hpp>
+#include <BelosTpetraAdapter.hpp>
+#include <Ifpack2_Factory.hpp>
+#include <MatrixMarket_Tpetra.hpp>
+#include <Teuchos_CommandLineProcessor.hpp>
+#include <Teuchos_ParameterXMLFileReader.hpp>
+#include <Teuchos_TimeMonitor.hpp>
+#include <Tpetra_Core.hpp>
+#include <Tpetra_CrsMatrix.hpp>
+
+  // Typedefs/aliases for ease of Trilinos use
+  using Teuchos::Comm;
+  using Teuchos::ParameterList;
+  using Teuchos::RCP;
+  using Teuchos::rcp;
+  using Teuchos::Time;
+  typedef Tpetra::CrsMatrix<double, int, int> crs_matrix_type;
+  typedef Tpetra::Map<> map_type;
+  typedef Tpetra::MultiVector<> MV;
+  typedef Tpetra::Operator<> OP;
+  typedef Tpetra::RowMatrix<> row_matrix_type;
+  typedef MV::scalar_type scalar_type;
+  typedef Ifpack2::Preconditioner<> prec_type;
+  typedef Belos::LinearProblem<scalar_type, MV, OP> problem_type;
+  typedef Belos::SolverManager<scalar_type, MV, OP> solver_type;
+  typedef Tpetra::MatrixMarket::Reader<crs_matrix_type> reader_type;
+
 /**
 * \addtogroup modules
 * @{
@@ -105,11 +132,11 @@ public:
     double l__max; // vertical mixing length (m)
     bool rouault_diffusion_coeff; //use the spatially variable diffusivity coefficient of Rouault 1991
 
-    bool do_fixed_settling; // should we have a constant settling velocity? 
+    bool do_fixed_settling; // should we have a constant settling velocity?
                             // true: constant settling velocity = settling_velocity (see below)
                             // false: use the parameterization of Pomeroy et al. (1993) and Pomeroy and Gray (1995):
-                            //        In this case, the settling velocity decreases with height above the snow surface 
-                            //        due to a decrease with height in the mean particle size. 
+                            //        In this case, the settling velocity decreases with height above the snow surface
+                            //        due to a decrease with height in the mean particle size.
     double settling_velocity; // Variable used if do_fixed_settling = true
     double n_non_edge_tri;
     double eps; //lapacian smoothing epilson.
@@ -122,8 +149,8 @@ public:
     bool use_exp_fetch; // Enable the exp Liston 2006 fetch
     bool use_tanh_fetch; // Enable the tanh Pomeroy and Male 1986 fetch
 
-    bool use_subgrid_topo; // Enable effect of subgrid topography on snow transport 
-    bool use_subgrid_topo_V2; // Enable effect of subgrid topography on snow transport 
+    bool use_subgrid_topo; // Enable effect of subgrid topography on snow transport
+    bool use_subgrid_topo_V2; // Enable effect of subgrid topography on snow transport
 
 
     bool iterative_subl; // if True, enables the iterative sublimation calculation as per Pomeroy and Li 2000
