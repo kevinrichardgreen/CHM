@@ -1729,10 +1729,10 @@ if (suspension_present) {
     entry = 0;
     for (unsigned int row = 0; row < vl_A.size1(); ++row)
     {
-        for (unsigned int col = row_buffer[row]; col < row_buffer[row + 1]; ++col)
+        for (unsigned int col = A_row_buffer[row]; col < A_row_buffer[row + 1]; ++col)
         {
-            outFileA << " " << row + 1 << " " << col_buffer[entry] + 1 << " " << std::setprecision(17)
-                     << elements[entry] << "\n";
+            outFileA << " " << row + 1 << " " << A_col_buffer[entry] + 1 << " " << std::setprecision(17)
+                     << A_elements[entry] << "\n";
             ++entry;
         }
     }
