@@ -1453,10 +1453,10 @@ void PBSM3D::run(mesh& domain)
 
     // Set up convergence tolerance to have an average value for each unknown
     double suspension_gmres_tol_per_unknown = 1e-8;
-    double suspension_gmres_tol = suspension_gmres_tol_per_unknown * nLayer * ntri;
+    double suspension_gmres_tol = 1e-8; // suspension_gmres_tol_per_unknown * nLayer * ntri;
     // Set max iterations and maximum Krylov dimension before restart
-    size_t suspension_gmres_max_iterations = 1000;
-    size_t suspension_gmres_krylov_dimension = 30;
+    size_t suspension_gmres_max_iterations = 3000;
+    size_t suspension_gmres_krylov_dimension = 50;
 
     // compute result and copy back to CPU device (if an accelerator was used),
     // otherwise access is slow
@@ -1467,8 +1467,8 @@ void PBSM3D::run(mesh& domain)
     viennacl::copy(vl_x, x);
 
     // Log final state of the linear solve
-//    LOG_DEBUG << "Suspension_GMRES # of iterations: " << suspension_custom_gmres.iters();
-//    LOG_DEBUG << "Suspension_GMRES final residual : " << suspension_custom_gmres.error();
+   LOG_DEBUG << "Suspension_GMRES # of iterations: " << suspension_custom_gmres.iters();
+   LOG_DEBUG << "Suspension_GMRES final residual : " << suspension_custom_gmres.error();
 
     /*
       Dump matrix to ASCII file
@@ -1640,9 +1640,9 @@ void PBSM3D::run(mesh& domain)
 
     // Set up convergence tolerance to have an average value for each unknown
     double deposition_flux_cg_tol_per_unknown = 1e-7;
-    double deposition_flux_cg_tol = deposition_flux_cg_tol_per_unknown * ntri;
+    double deposition_flux_cg_tol = 1e-8; // deposition_flux_cg_tol_per_unknown * ntri;
     // Set max iterations and maximum Krylov dimension before restart
-    size_t deposition_flux_cg_max_iterations = 500;
+    size_t deposition_flux_cg_max_iterations = 1000;
 
     // compute result and copy back to CPU device (if an accelerator was used),
     // otherwise access is slow
