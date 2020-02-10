@@ -426,6 +426,84 @@ void PBSM3D::init(mesh& domain)
 
     // Set up Trilinos mat sparsity here
 
+    comm = Tpetra::getDefaultComm();
+
+    /*
+      Initialize the local-global index map for the mesh elements.
+    */
+    auto global_IDs = domain->get_global_IDs();
+    // explicitly make this int* to get proper type matching in the Tpetra::Map<>() constructor
+    int* data_IDs = global_IDs.data();
+    // Construct a Map that puts approximately the same number of
+    // equations on each processor.
+    int indexBase = 0;
+    mesh_map = rcp(new map_type(domain->size_global_faces(), data_IDs, (int)domain->size_faces(), indexBase, comm));
+
+    // loop over locally owned rows, figure out number of neighbors (owned or
+    // otherwise!), and what their global indices are.
+    // NOTE That for the constructor we use, num_neighbors must be templated on size_t
+    ArrayRCP<size_t> num_neighbors = arcp<size_t>(domain->size_faces());
+    std::fill_n(std::begin(num_neighbors),domain->size_faces(),1); // ensure initialized to 0
+    std::vector<int[4]> neighbor_global_idx(domain->size_faces());
+    #pragma omp parallel for
+    for (int i = 0; i < domain->size_faces(); ++i) {
+      auto face = domain->face(i);
+      neighbor_global_idx[i][0] = face->cell_global_id;
+      for (int f = 0; f < 3; f++){
+	  auto neighbor = face->neighbor(f);
+	  if (neighbor != nullptr)  {
+	    ++num_neighbors[i];
+	    neighbor_global_idx[i][num_neighbors[i]+1] = neighbor->cell_global_id;
+	  }
+      }
+    }
+
+    /*
+      Set up the CrsGraph structure for creating the distributed CrsMatrix and
+      Vectors for the deposition system
+     */
+    // Graph for deposition system (equivalent to the mesh)
+    // 4 entries (max) per row: self and three neighbors
+    // (fewer entries for boundary elements)
+    // A further optimization is to specify how many nonzeros for each row.
+    mesh_graph = rcp (new graph_type (mesh_map, num_neighbors, Tpetra::StaticProfile));
+
+    // Set all of the desired columns in the graph
+    // due to insertGlobalIndices args
+    for (size_t i = 0; i < domain->size_faces(); ++i) {
+      auto face = domain->face(i);
+      mesh_graph->insertGlobalIndices(face->cell_global_id, num_neighbors[i]+1, &(neighbor_global_idx.data()[i][0]));
+    }
+    mesh_graph->fillComplete();
+
+    // Create a Tpetra::Matrix using the Map, with a static allocation
+    // dictated by NumNz.  (We know exactly how many elements there will
+    // be in each row, so we use static profile for efficiency.)
+    deposition_matrix = rcp (new crs_matrix_type (mesh_graph));
+    deposition_rhs = rcp(new MV(mesh_map, 1));
+    deposition_solution = rcp(new MV(mesh_map, deposition_rhs->getNumVectors()));
+
+    /*
+      Belos solver and Ifpack2 preconditioner setup
+     */
+    // Create Belos iterative linear solver.
+    RCP<ParameterList> deposition_solverParams(new ParameterList()); // solve parameters go in here
+    {
+        Belos::SolverFactory<scalar_type, MV, OP> belosFactory;
+        deposition_solver = belosFactory.create("GMRES", deposition_solverParams);
+    }
+    if (deposition_solver.is_null())
+    {
+      BOOST_THROW_EXCEPTION(module_error() << errstr_info("PBSM3D failed to create deposition_solver"));
+    }
+
+    deposition_preconditioner = Ifpack2::Factory::create<row_matrix_type>("ILUT", deposition_matrix);
+    if (deposition_preconditioner.is_null())
+    {
+      BOOST_THROW_EXCEPTION(module_error() << errstr_info("PBSM3D failed to create deposition_preconditioner"));
+    }
+    deposition_preconditioner->initialize();
+
     b.resize(ntri * nLayer);
     bb.resize(ntri);
     nnz = vl_C.nnz();
@@ -950,9 +1028,9 @@ void PBSM3D::run(mesh& domain)
                 double udotm[3] = {0, 0, 0};
                 double E[3] = {0, 0, 0};
 
-                //compute a divergence mass flux of saltation assuming our neighbours are 0 flux
-                //however, we can't compute it w/ an upwind scheme like we do for the true solution later
-                //as we don't know the neighbours values (might not have been computed yet). So this is just an
+                // compute a divergence mass flux of saltation assuming our neighbours are 0 flux
+                // however, we can't compute it w/ an upwind scheme like we do for the true solution later
+                // as we don't know the neighbours values (might not have been computed yet). So this is just an
                 for (int j = 0; j < 3; ++j)
                 {
                     udotm[j] = arma::dot(uvw, d->m[j]);
@@ -960,7 +1038,7 @@ void PBSM3D::run(mesh& domain)
                     mass += -E[j] * Qsalt * udotm[j];
                 }
 
-                mass = mass/V * global_param->dt();
+                mass = mass / V * global_param->dt();
 
                 if (debug_output)
                 {
@@ -968,15 +1046,15 @@ void PBSM3D::run(mesh& domain)
                     (*face)["mass_qsalt"_s] = mass;
                 }
 
-                if( mass < 0 && std::fabs(mass) > swe)
+                if (mass < 0 && std::fabs(mass) > swe)
                 {
-                  c_salt = 0;
-                  //-swe*V/(hs*uhs*(E[0]*udotm[0]+E[1]*udotm[1]+E[2]*udotm[2])*global_param->dt());
-                  // kg/(m*s)
-                  Qsalt = c_salt * uhs * hs; // integrate over the depth of the saltation layer, kg/(m*s)
+                    c_salt = 0;
+                    //-swe*V/(hs*uhs*(E[0]*udotm[0]+E[1]*udotm[1]+E[2]*udotm[2])*global_param->dt());
+                    // kg/(m*s)
+                    Qsalt = c_salt * uhs * hs; // integrate over the depth of the saltation layer, kg/(m*s)
 
-                  if (debug_output)
-                      (*face)["csalt_reset"_s] = c_salt;
+                    if (debug_output)
+                        (*face)["csalt_reset"_s] = c_salt;
                 }
             }
 
@@ -1315,7 +1393,7 @@ void PBSM3D::run(mesh& domain)
                         else // missing neighbour case
                         {
                             // no mass in
-//                            elements[ idx_idx_off ] += V*csubl-d->A[f]*udotm[f]-alpha[f];
+                            //                            elements[ idx_idx_off ] += V*csubl-d->A[f]*udotm[f]-alpha[f];
 
                             // allow mass into the domain from ghost cell
                             elements[idx_idx_off] += -0.1e-1 * alpha[f] - 1. * d->A[f] * udotm[f] + csubl * V;
@@ -1335,7 +1413,7 @@ void PBSM3D::run(mesh& domain)
                         else
                         {
                             // No mass in
-//                            elements[ idx_idx_off ] +=  V*csubl-alpha[f];
+                            //                            elements[ idx_idx_off ] +=  V*csubl-alpha[f];
 
                             // allow mass in
                             elements[idx_idx_off] += -0.1e-1 * alpha[f] - .99 * d->A[f] * udotm[f] + csubl * V;
@@ -1490,64 +1568,69 @@ if (suspension_present) {
     outFileCrhs.close();
 
     // Load into Trilinos and solve
-    RCP<const Comm<int> > comm = Tpetra::getDefaultComm ();
 
     // This solves the steady-state suspension layer concentration
 
     // Read sparse matrix A from Matrix Market file.
-    RCP<crs_matrix_type> tri_C =
-      reader_type::readSparseFile ("C.mm", comm);
+    RCP<crs_matrix_type> tri_C = reader_type::readSparseFile("C.mm", comm);
     // Read right-hand side vector(s) B from Matrix Market file.
-    RCP<const map_type> map = tri_C->getRangeMap ();
-    RCP<MV> tri_Crhs = reader_type::readDenseFile ("Crhs.mm", comm, map);
+    RCP<const map_type> map = tri_C->getRangeMap();
+    RCP<MV> tri_Crhs = reader_type::readDenseFile("Crhs.mm", comm, map);
 
     // Create Belos iterative linear solver.
     RCP<solver_type> solver;
-    RCP<ParameterList> solverParams (new ParameterList ());
+    RCP<ParameterList> solverParams(new ParameterList());
     {
-      Belos::SolverFactory<scalar_type, MV, OP> belosFactory;
-      solver = belosFactory.create ("GMRES", solverParams);
+        Belos::SolverFactory<scalar_type, MV, OP> belosFactory;
+        solver = belosFactory.create("GMRES", solverParams);
     }
-    if (solver.is_null ()) {
-      if (comm->getRank () == 0) {
-	std::cerr << "Failed to create Belos solver!" << std::endl;
-      }
-      // return EXIT_FAILURE;
+    if (solver.is_null())
+    {
+        if (comm->getRank() == 0)
+        {
+            std::cerr << "Failed to create Belos solver!" << std::endl;
+        }
+        // return EXIT_FAILURE;
     }
 
-  // Create Ifpack2 preconditioner.
+    // Create Ifpack2 preconditioner.
     RCP<prec_type> M;
-    M = Ifpack2::Factory::create<row_matrix_type> ("ILUT", tri_C);
-    if (M.is_null ()) {
-      if (comm->getRank () == 0) {
-        std::cerr << "Failed to create Ifpack2 preconditioner!" << std::endl;
-      }
-      // return EXIT_FAILURE;
+    M = Ifpack2::Factory::create<row_matrix_type>("ILUT", tri_C);
+    if (M.is_null())
+    {
+        if (comm->getRank() == 0)
+        {
+            std::cerr << "Failed to create Ifpack2 preconditioner!" << std::endl;
+        }
+        // return EXIT_FAILURE;
     }
-    M->initialize ();
-    M->compute ();
+    M->initialize();
+    M->compute();
 
     // Set up the linear problem to solve.
-    RCP<MV> tri_X (new MV (tri_C->getDomainMap (), tri_Crhs->getNumVectors ()));
+    RCP<MV> tri_X(new MV(tri_C->getDomainMap(), tri_Crhs->getNumVectors()));
     RCP<problem_type> problem;
     {
-      problem = rcp (new problem_type (tri_C, tri_X, tri_Crhs));
-      if (! M.is_null ()) {
-	problem->setRightPrec (M);
-      }
-      problem->setProblem ();
-      solver->setProblem (problem);
+        problem = rcp(new problem_type(tri_C, tri_X, tri_Crhs));
+        if (!M.is_null())
+        {
+            problem->setRightPrec(M);
+        }
+        problem->setProblem();
+        solver->setProblem(problem);
     }
 
     // Solve the linear system.
     {
-      Belos::ReturnType solveResult = solver->solve ();
-      if (solveResult != Belos::Converged) {
-	if (comm->getRank () == 0) {
-	  cerr << "Solve failed to converge!" << endl;
-	}
-	// return EXIT_FAILURE;
-      }
+        Belos::ReturnType solveResult = solver->solve();
+        if (solveResult != Belos::Converged)
+        {
+            if (comm->getRank() == 0)
+            {
+                cerr << "Solve failed to converge!" << endl;
+            }
+            // return EXIT_FAILURE;
+        }
     }
 
     auto xArray = tri_X->get1dView();
@@ -1568,7 +1651,7 @@ if (suspension_present) {
     //  std::copy can handle this easily due to iterable nature of Teuchos::ArrayRCP<>
     //  NOTE this is a serial copy though, look towards parallel STL
     std::vector<vcl_scalar_type> x(xArray.size());
-    std::copy( xArray.begin(), xArray.end(), x.begin() );
+    std::copy(xArray.begin(), xArray.end(), x.begin());
 
 #pragma omp parallel for
     for (size_t i = 0; i < domain->size_faces(); i++)
@@ -1608,6 +1691,10 @@ if (suspension_present) {
 
     }
 
+    /*
+      Setup and solve the linear system for deposition
+     */
+
     // Setup the matrix to be used to the solution of the gradient of the
     // suspension flux this will give us our deposition flux
     // get row buffer
@@ -1627,8 +1714,10 @@ if (suspension_present) {
     //     zero fill RHS for drift
     bb.clear();
 
-    saltation_present=false;
+    // Zero the rhs
+    deposition_rhs->putScalar(0.0);
 
+    deposition_matrix->resumeFill();
 
 #pragma omp parallel for
     for (size_t i = 0; i < domain->size_faces(); i++)
@@ -1646,16 +1735,23 @@ if (suspension_present) {
         uvw(1) = v.y(); // U_y
         uvw(2) = 0;
 
-        double udotm[3]= {0, 0, 0}; // Qt is in direction u_hat
-        double E[3] = {0, 0, 0}; // edge lengths b/c 2d now
+        double udotm[3] = {0, 0, 0};    // Qt is in direction u_hat
+        double E[3] = {0, 0, 0};        // edge lengths b/c 2d now
         double dx[3] = {2.0, 2.0, 2.0}; // cell centre distances
 
         double V = face->get_area(); // V for consistency but actually an area
 
         size_t i_i_off = offset(A_row_buffer[i], A_row_buffer[i + 1], A_col_buffer, i);
+
+	int local_row, global_row, local_col, global_col;
+	global_row = static_cast<int>(face->cell_global_id);
+	global_col = static_cast<int>(face->cell_global_id);
+
+	deposition_matrix->replaceGlobalValues(global_row, tuple(global_col), tuple(V));
+
         A_elements[i_i_off] = V;
 
-        //iterate over edges
+        // iterate over edges
         for (int j = 0; j < 3; j++)
         {
             // just unit vectors as qsusp/qsalt flux has magnitude
@@ -1665,11 +1761,11 @@ if (suspension_present) {
             double Qtj = 0;
             double Qsj = 0;
 
-            //Pointing same way, we advect downwind
-            if(udotm[j] > 0)
+            // Pointing same way, we advect downwind
+            if (udotm[j] > 0)
             {
-                    Qtj = (*face)["Qsusp"_s];
-                    Qsj = (*face)["Qsalt"_s];
+                Qtj = (*face)["Qsusp"_s];
+                Qsj = (*face)["Qsalt"_s];
             }
             else // pointing into the wind, use upwind as donor
             {
@@ -1681,35 +1777,41 @@ if (suspension_present) {
                 }
                 else
                 {
-                    //neighbour doesn't exist, treat as duplicate ghost node
+                    // neighbour doesn't exist, treat as duplicate ghost node
                     Qtj = (*face)["Qsusp"_s];
                     Qsj = (*face)["Qsalt"_s];
                 }
             }
 
-            //we now have an edge Qtj & Qsj estimate
-            //build up our neighbours
+            // we now have an edge Qtj & Qsj estimate
+            // build up our neighbours
             if (d->face_neigh[j])
             {
                 auto neigh = face->neighbor(j);
+		global_col = static_cast<int>(neigh->cell_global_id);
                 dx[j] = math::gis::distance(face->center(), neigh->center());
 
-                A_elements[i_i_off] += eps*E[j]/dx[j];
+		// diagonal entry
+		deposition_matrix->sumIntoGlobalValues(global_row, tuple(global_row), tuple(eps * E[j] / dx[j]));
+                A_elements[i_i_off] += eps * E[j] / dx[j];
+
+		// off diagonal entry
+		deposition_matrix->replaceGlobalValues(global_row, tuple(global_col), tuple(-eps * E[j] / dx[j]));
 
                 size_t i_ni_off = offset(A_row_buffer[i], A_row_buffer[i + 1], A_col_buffer, neigh->cell_local_id);
-                A_elements[i_ni_off] += -eps*E[j]/dx[j];
-
+                A_elements[i_ni_off] += -eps * E[j] / dx[j];
             }
-            bb[i] +=  -E[j]*(Qtj+Qsj)*udotm[j];
+            bb[i] += -E[j] * (Qtj + Qsj) * udotm[j];
+
+	    double val = -E[j] * (Qtj + Qsj) * udotm[j];
+	    deposition_rhs->sumIntoGlobalValue(global_row,0,val);
         }
 	if (abs(bb[i]) > saltation_present_threshold) {
 	  saltation_present=true;
 	}
     } // end face itr
 
-    std::vector<vcl_scalar_type> dSdt(ntri,0.0);
-
-    if (saltation_present) {
+    deposition_matrix->fillComplete();
 
 // setup the compressed matrix on the compute device, if available
 #ifdef VIENNACL_WITH_OPENCL
@@ -1749,79 +1851,53 @@ if (suspension_present) {
     }
     outFileArhs.close();
 
-    // Load into Trilinos and solve
+    std::string deposition_matrix_file="A_tri.mm";
+    std::string deposition_matrix_name="Deposition flux system matrix";
+    Tpetra::MatrixMarket::Writer<crs_matrix_type>::writeSparseFile( deposition_matrix_file, deposition_matrix, deposition_matrix_name, NULL );
 
-    // Read sparse matrix A from Matrix Market file.
-    RCP<crs_matrix_type> tri_A =
-      reader_type::readSparseFile ("A.mm", comm);
-    // Read right-hand side vector(s) B from Matrix Market file.
-    RCP<const map_type> mapA = tri_A->getRangeMap ();
-    RCP<MV> tri_Arhs = reader_type::readDenseFile ("Arhs.mm", comm, mapA);
+    std::string deposition_rhs_file="Arhs_tri.mm";
+    std::string deposition_rhs_name="Deposition flux system rhs";
+    Tpetra::MatrixMarket::Writer<crs_matrix_type>::writeDenseFile( deposition_rhs_file, deposition_rhs, deposition_rhs_name, NULL );
 
-    // Create Belos iterative linear solver.
-    RCP<solver_type> deposition_solver;
-    RCP<ParameterList> deposition_solverParams (new ParameterList ());
-    {
-      Belos::SolverFactory<scalar_type, MV, OP> belosFactoryA;
-      deposition_solver = belosFactoryA.create ("GMRES", solverParams);
-    }
-    if (deposition_solver.is_null ()) {
-      if (comm->getRank () == 0) {
-	std::cerr << "Failed to create Belos solver!" << std::endl;
-      }
-      // return EXIT_FAILURE;
-    }
+    exit(0);
 
-  // Create Ifpack2 preconditioner.
-    RCP<prec_type> M2;
-    M2 = Ifpack2::Factory::create<row_matrix_type> ("ILUT", tri_A);
-    if (M2.is_null ()) {
-      if (comm->getRank () == 0) {
-        std::cerr << "Failed to create Ifpack2 preconditioner!" << std::endl;
-      }
-      // return EXIT_FAILURE;
-    }
-    M2->initialize ();
-    M2->compute ();
+    // re-zero the deposition solution vector
+    deposition_solution->putScalar(0.0);
 
-    // Set up the linear problem to solve.
-    RCP<MV> tri_X2 (new MV (tri_A->getDomainMap (), tri_Arhs->getNumVectors ()));
-    RCP<problem_type> problem2;
-    {
-      problem2 = rcp (new problem_type (tri_A, tri_X2, tri_Arhs));
-      if (! M2.is_null ()) {
-	problem2->setRightPrec (M2);
-      }
-      problem2->setProblem ();
-      deposition_solver->setProblem (problem2);
-    }
+    deposition_preconditioner->compute();
 
     // Solve the linear system.
     {
-      Belos::ReturnType solveResult = deposition_solver->solve ();
-      if (solveResult != Belos::Converged) {
-	if (comm->getRank () == 0) {
-	  std::cerr << "Solve failed to converge!" << std::endl;
-	}
-	// return EXIT_FAILURE;
-      }
+        Belos::ReturnType solveResult = deposition_solver->solve();
+        if (solveResult != Belos::Converged)
+        {
+            if (comm->getRank() == 0)
+            {
+	      BOOST_THROW_EXCEPTION(module_error() << errstr_info("PBSM3D deposition_solver failed to converge"));
+            }
+            // return EXIT_FAILURE;
+        }
     }
+
+    // // Load into Trilinos and solve
+    // // Read sparse matrix A from Matrix Market file.
+    // RCP<crs_matrix_type> tri_A = reader_type::readSparseFile("A.mm", comm);
+    // // Read right-hand side vector(s) B from Matrix Market file.
+    // RCP<const map_type> mapA = tri_A->getRangeMap();
+    // RCP<MV> tri_Arhs = reader_type::readDenseFile("Arhs.mm", comm, mapA);
+
 
     numIters = deposition_solver->getNumIters();
     residual = deposition_solver->achievedTol();
     std::cout << "deposition iterations: " << numIters << " residual: " << residual << "\n";
 
-    auto x2Array = tri_X2->get1dView();
+    auto deposition_array = deposition_solution->get1dView();
     // Copy the Trilinos data into an std::vector
     //  std::copy can handle this easily due to iterable nature of Teuchos::ArrayRCP<>
-    //  NOTE this is a serial copy though, look towards parallel STL
-    std::vector<vcl_scalar_type> dSdt(x2Array.size());
-    std::copy( x2Array.begin(), x2Array.end(), dSdt.begin() );
-
-    } // if saltation_present
-    else {
-      LOG_DEBUG << "  No saltation present. ";
-    }
+    //  NOTE this is a serial copy though, look towards parallel STL / TBB
+    //  This step may not even be necessary, and we can use the deposition_array directly below
+    std::vector<vcl_scalar_type> dSdt(deposition_array.size());
+    std::copy(deposition_array.begin(), deposition_array.end(), dSdt.begin());
 
 #pragma omp parallel for
     for (size_t i = 0; i < domain->size_faces(); i++)
@@ -1838,10 +1914,10 @@ if (suspension_present) {
         double swe = (*face)["swe"_s]; // mm   -->    kg/m^2
         swe = is_nan(swe) ? 0 : swe;   // handle the first timestep where swe won't have been
         // updated if we override the module order
-//        if( mass < 0 && std::fabs(mass) > swe )
-//        {
-//            mass = -swe;
-//        }
+        //        if( mass < 0 && std::fabs(mass) > swe )
+        //        {
+        //            mass = -swe;
+        //        }
         (*face)["drift_mass"_s] = mass;
         (*face)["sum_drift"_s] += mass;
     }

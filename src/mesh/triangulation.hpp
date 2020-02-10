@@ -623,10 +623,16 @@ public:
 //    void init(vector x, vector y, vector z);
 
     /**
-    * Return the number of faces in the triangluation
+    * Return the number of faces in the local triangluation
     * \return Number of triangle faces
     */
     size_t size_faces();
+
+    /**
+    * Return the number of faces in the global triangluation
+    * \return Number of triangle faces
+    */
+    size_t size_global_faces();
 
     /**
     * Return the number of verticies in the triangulation
@@ -695,6 +701,12 @@ public:
     * \return A face handle to the ith face
     */
     mesh_elem face(size_t i);
+
+    /**
+    * Returns the vector of locally owned global IDs
+    * \return A vector of global IDs for the locally owned elements
+    */
+    const std::vector<int>& get_global_IDs() const;
 
     /**
     * Returns the finite vertex at index i. A given index will always return the same vertex.
@@ -823,6 +835,7 @@ public:
     std::set<std::string> _parameters;
 private:
     size_t _num_faces; //number of faces
+    size_t _num_global_faces; //number of faces
     size_t _num_vertex; //number of rows in the original data matrix. useful for exporting to matlab, etc
     K::Iso_rectangle_2 _bbox;
 	bool _is_geographic;
@@ -860,6 +873,10 @@ private:
     std::vector< std::pair<mesh_elem,bool> > _boundary_faces;
     std::vector< mesh_elem > _ghost_neighbours;
     std::vector< mesh_elem > _ghost_faces;
+
+    std::vector<int> _global_IDs;
+
+  std::vector< std::shared_ptr<station> > _stations;
 
 #ifdef NOMATLAB
     //ptr to the matlab engine

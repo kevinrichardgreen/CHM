@@ -101,6 +101,10 @@ size_t triangulation::size_faces()
 {
     return _num_faces;
 }
+size_t triangulation::size_global_faces()
+{
+    return _num_global_faces;
+}
 
 size_t triangulation::size_vertex()
 {
@@ -496,12 +500,11 @@ void triangulation::from_json(pt::ptree &mesh)
     partition_mesh();
 #ifdef USE_MPI
     _num_faces = _local_faces.size();
-    size_t total_num_faces = _faces.size();
     determine_local_boundary_faces();
     determine_process_ghost_faces_nearest_neighbours();
 
     // should make this parallel
-    for(size_t ii=0; ii < total_num_faces; ++ii)
+    for(size_t ii=0; ii < _num_global_faces; ++ii)
     {
         auto face = _faces.at(ii);
         Point_2 pt2(face->center().x(),face->center().y());
@@ -608,9 +611,7 @@ void triangulation::partition_mesh()
   // 2. Determine (processor) locally owned indices of faces
   // 3. Set locally owned _is_ghost=false
 
-
-
-  size_t total_num_faces = _faces.size();
+  _num_global_faces = _faces.size();
 
 #ifdef USE_MPI
 
@@ -618,8 +619,8 @@ void triangulation::partition_mesh()
 
   // Set up so that all processors know how 'big' all other processors are
   std::vector<int> num_faces_in_partition(_comm_world.size(),
-  					  total_num_faces/_comm_world.size());
-  for (unsigned int i=0;i<total_num_faces%_comm_world.size();++i) {
+  					  _num_global_faces/_comm_world.size());
+  for (unsigned int i=0;i<_num_global_faces%_comm_world.size();++i) {
     num_faces_in_partition[i]++;
   }
 
@@ -635,14 +636,14 @@ void triangulation::partition_mesh()
   // Set size of vector containing locally owned faces
   _local_faces.resize(num_faces_in_partition[_comm_world.rank()]);
 
+  _global_IDs.resize(_local_faces.size());
 #pragma omp parallel for
   for(int local_ind=0;local_ind<_local_faces.size();++local_ind)
   {
-
-	     size_t global_ind = face_start_idx + local_ind;
-	     _faces.at(global_ind)->_is_ghost = false;
-	     _faces.at(global_ind)->cell_local_id = local_ind;
-	     _local_faces[local_ind] = _faces.at(global_ind);
+             _global_IDs[local_ind] = face_start_idx + local_ind;
+	     _faces.at(_global_IDs[local_ind])->_is_ghost = false;
+	     _faces.at(_global_IDs[local_ind])->cell_local_id = local_ind;
+	     _local_faces[local_ind] = _faces.at(_global_IDs[local_ind]);
 
   }
 
@@ -653,7 +654,7 @@ void triangulation::partition_mesh()
 #else // do not USE_MPI
 
 #pragma omp parallel for
-  for(size_t i=0;i<total_num_faces;++i)
+  for(size_t i=0;i<_num_global_faces;++i)
   {
     _faces.at(i)->_is_ghost = false;
     _faces.at(i)->cell_local_id = i; // Mesh has been (potentially) reordered before this point. Set the local_id correctly
@@ -721,6 +722,7 @@ void triangulation::determine_local_boundary_faces()
 		   th_local_boundary_faces[omp_get_thread_num()].push_back(std::make_pair(face,false));
 		 }
       }
+
     // Join the vectors via a single thread in t operations
     //  NOTE future optimizations:
     //   - reserve space for insertions into _boundary_faces
@@ -896,6 +898,11 @@ mesh_elem triangulation::face(size_t i)
 #else
     return _faces.at(i);
 #endif
+}
+
+const std::vector<int>& triangulation::get_global_IDs() const
+{
+  return _global_IDs;
 }
 
 void triangulation::timeseries_to_file(double x, double y, std::string fname)
