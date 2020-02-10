@@ -441,9 +441,9 @@ void PBSM3D::init(mesh& domain)
 
     // loop over locally owned rows, figure out number of neighbors (owned or
     // otherwise!), and what their global indices are.
-    // NOTE That for the constructor we use, num_neighbors must be templated on size_t
-    ArrayRCP<size_t> num_neighbors = arcp<size_t>(domain->size_faces());
-    std::fill_n(std::begin(num_neighbors),domain->size_faces(),1); // ensure initialized to 0
+    // NOTE That for the constructor we use, num_entries must be templated on size_t
+    ArrayRCP<size_t> num_entries = arcp<size_t>(domain->size_faces());
+    std::fill_n(std::begin(num_entries),domain->size_faces(),1); // ensure initialized to 1 (diagonal)
     std::vector<int[4]> neighbor_global_idx(domain->size_faces());
     #pragma omp parallel for
     for (int i = 0; i < domain->size_faces(); ++i) {
@@ -452,8 +452,8 @@ void PBSM3D::init(mesh& domain)
       for (int f = 0; f < 3; f++){
 	  auto neighbor = face->neighbor(f);
 	  if (neighbor != nullptr)  {
-	    ++num_neighbors[i];
-	    neighbor_global_idx[i][num_neighbors[i]+1] = neighbor->cell_global_id;
+	    neighbor_global_idx[i][num_entries[i]] = neighbor->cell_global_id;
+	    ++num_entries[i];
 	  }
       }
     }
@@ -466,13 +466,13 @@ void PBSM3D::init(mesh& domain)
     // 4 entries (max) per row: self and three neighbors
     // (fewer entries for boundary elements)
     // A further optimization is to specify how many nonzeros for each row.
-    mesh_graph = rcp (new graph_type (mesh_map, num_neighbors, Tpetra::StaticProfile));
+    mesh_graph = rcp (new graph_type (mesh_map, num_entries, Tpetra::StaticProfile));
 
     // Set all of the desired columns in the graph
     // due to insertGlobalIndices args
     for (size_t i = 0; i < domain->size_faces(); ++i) {
       auto face = domain->face(i);
-      mesh_graph->insertGlobalIndices(face->cell_global_id, num_neighbors[i]+1, &(neighbor_global_idx.data()[i][0]));
+      mesh_graph->insertGlobalIndices(face->cell_global_id, num_entries[i], &(neighbor_global_idx.data()[i][0]));
     }
     mesh_graph->fillComplete();
 
@@ -480,6 +480,7 @@ void PBSM3D::init(mesh& domain)
     // dictated by NumNz.  (We know exactly how many elements there will
     // be in each row, so we use static profile for efficiency.)
     deposition_matrix = rcp (new crs_matrix_type (mesh_graph));
+    deposition_matrix->fillComplete();
     deposition_rhs = rcp(new MV(mesh_map, 1));
     deposition_solution = rcp(new MV(mesh_map, deposition_rhs->getNumVectors()));
 
@@ -503,6 +504,14 @@ void PBSM3D::init(mesh& domain)
       BOOST_THROW_EXCEPTION(module_error() << errstr_info("PBSM3D failed to create deposition_preconditioner"));
     }
     deposition_preconditioner->initialize();
+
+    // Specify the deposition problem
+    deposition_problem = rcp (new problem_type (deposition_matrix, deposition_solution, deposition_rhs));
+    if (! deposition_preconditioner.is_null ()) {
+      deposition_problem->setRightPrec (deposition_preconditioner);
+    }
+    deposition_problem->setProblem ();
+    deposition_solver->setProblem (deposition_problem);
 
     b.resize(ntri * nLayer);
     bb.resize(ntri);
@@ -1797,14 +1806,13 @@ if (suspension_present) {
 
 		// off diagonal entry
 		deposition_matrix->replaceGlobalValues(global_row, tuple(global_col), tuple(-eps * E[j] / dx[j]));
-
                 size_t i_ni_off = offset(A_row_buffer[i], A_row_buffer[i + 1], A_col_buffer, neigh->cell_local_id);
                 A_elements[i_ni_off] += -eps * E[j] / dx[j];
             }
             bb[i] += -E[j] * (Qtj + Qsj) * udotm[j];
 
 	    double val = -E[j] * (Qtj + Qsj) * udotm[j];
-	    deposition_rhs->sumIntoGlobalValue(global_row,0,val);
+	    deposition_rhs->replaceGlobalValue(global_row,0,val);
         }
 	if (abs(bb[i]) > saltation_present_threshold) {
 	  saltation_present=true;
@@ -1864,9 +1872,11 @@ if (suspension_present) {
     // re-zero the deposition solution vector
     deposition_solution->putScalar(0.0);
 
+    deposition_preconditioner->initialize();
     deposition_preconditioner->compute();
 
     // Solve the linear system.
+    deposition_solver->reset(Belos::Problem);
     {
         Belos::ReturnType solveResult = deposition_solver->solve();
         if (solveResult != Belos::Converged)
@@ -1887,9 +1897,9 @@ if (suspension_present) {
     // RCP<MV> tri_Arhs = reader_type::readDenseFile("Arhs.mm", comm, mapA);
 
 
-    numIters = deposition_solver->getNumIters();
-    residual = deposition_solver->achievedTol();
-    std::cout << "deposition iterations: " << numIters << " residual: " << residual << "\n";
+    auto numIters = deposition_solver->getNumIters();
+    auto residual = deposition_solver->achievedTol();
+    LOG_DEBUG << "deposition iterations: " << numIters << " residual: " << residual;
 
     auto deposition_array = deposition_solution->get1dView();
     // Copy the Trilinos data into an std::vector

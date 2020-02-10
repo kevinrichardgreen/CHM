@@ -72,22 +72,26 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 
-  // Typedefs/aliases for ease of Trilinos use
-  using Teuchos::Comm;
-  using Teuchos::ParameterList;
-  using Teuchos::RCP;
-  using Teuchos::rcp;
-  using Teuchos::Time;
-  typedef Tpetra::CrsMatrix<double, int, int> crs_matrix_type;
-  typedef Tpetra::Map<> map_type;
-  typedef Tpetra::MultiVector<> MV;
-  typedef Tpetra::Operator<> OP;
-  typedef Tpetra::RowMatrix<> row_matrix_type;
-  typedef MV::scalar_type scalar_type;
-  typedef Ifpack2::Preconditioner<> prec_type;
-  typedef Belos::LinearProblem<scalar_type, MV, OP> problem_type;
-  typedef Belos::SolverManager<scalar_type, MV, OP> solver_type;
-  typedef Tpetra::MatrixMarket::Reader<crs_matrix_type> reader_type;
+// Typedefs/aliases for ease of Trilinos use
+using Teuchos::arcp;
+using Teuchos::ArrayRCP;
+using Teuchos::Comm;
+using Teuchos::ParameterList;
+using Teuchos::RCP;
+using Teuchos::rcp;
+using Teuchos::Time;
+using Teuchos::tuple;
+typedef Tpetra::CrsGraph<> graph_type;
+typedef Tpetra::CrsMatrix<double, int, int> crs_matrix_type;
+typedef Tpetra::Map<> map_type;
+typedef Tpetra::MultiVector<> MV;
+typedef Tpetra::Operator<> OP;
+typedef Tpetra::RowMatrix<> row_matrix_type;
+typedef MV::scalar_type scalar_type;
+typedef Ifpack2::Preconditioner<> prec_type;
+typedef Belos::LinearProblem<scalar_type, MV, OP> problem_type;
+typedef Belos::SolverManager<scalar_type, MV, OP> solver_type;
+typedef Tpetra::MatrixMarket::Reader<crs_matrix_type> reader_type;
 
 /**
 * \addtogroup modules
@@ -122,6 +126,8 @@ public:
 
     typedef viennacl::compressed_matrix<vcl_scalar_type> MatrixType;
     typedef viennacl::vector<vcl_scalar_type> VectorType;
+
+    RCP<const Comm<int>> comm;
 
     double nLayer;
     double susp_depth;
@@ -223,6 +229,19 @@ public:
     };
 
 private:
+    // Trilinos data structures for linear solves
+    RCP<crs_matrix_type> suspension_matrix;
+    RCP<MV> suspension_rhs, suspension_solution;
+    RCP<solver_type> suspension_solver;
+    RCP<prec_type> suspension_preconditioner;
+
+    RCP<crs_matrix_type> deposition_matrix;
+    RCP<MV> deposition_rhs, deposition_solution;
+    RCP<solver_type> deposition_solver;
+    RCP<prec_type> deposition_preconditioner;
+
+    RCP<const map_type > mesh_map;
+    RCP<graph_type> mesh_graph;
 
   // For detecting if there is suspension and/or saltation
   bool suspension_present, saltation_present;
