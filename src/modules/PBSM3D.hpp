@@ -48,6 +48,7 @@
 #include <viennacl/linalg/gmres.hpp>
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/linalg/ilu.hpp>
+#include <viennacl/linalg/ichol.hpp>
 #include <viennacl/linalg/cg.hpp>
 
 

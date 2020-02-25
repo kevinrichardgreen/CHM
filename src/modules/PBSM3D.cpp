@@ -1661,11 +1661,9 @@ if (suspension_present) {
 //     Solve the deposition flux --> how much drifting there is.
 
 //     configuration of preconditioner:
-    viennacl::linalg::chow_patel_tag deposition_flux_chow_patel_config;
-    deposition_flux_chow_patel_config.sweeps(3);       //  nonlinear sweeps
-    deposition_flux_chow_patel_config.jacobi_iters(2); //  Jacobi iterations per triangular 'solve' Rx=r
-    viennacl::linalg::chow_patel_icc_precond<viennacl::compressed_matrix<vcl_scalar_type>>
-        deposition_flux_chow_patel_icc(vl_A, deposition_flux_chow_patel_config);
+    viennacl::linalg::ichol0_tag deposition_flux_ichol0_config;
+    viennacl::linalg::ichol0_precond<viennacl::compressed_matrix<vcl_scalar_type>>
+      deposition_flux_ichol0(vl_A, deposition_flux_ichol0_config);
 
     // Set up convergence tolerance to have an average value for each unknown
     double deposition_flux_cg_tol = 1e-8;
@@ -1679,7 +1677,7 @@ if (suspension_present) {
     // compute result and copy back to CPU device (if an accelerator was used),
     // otherwise access is slow
     viennacl::vector<vcl_scalar_type> vl_dSdt =
-        viennacl::linalg::solve(vl_A, bb, deposition_flux_custom_cg, deposition_flux_chow_patel_icc);
+        viennacl::linalg::solve(vl_A, bb, deposition_flux_custom_cg, deposition_flux_ichol0);
     // viennacl::vector<vcl_scalar_type> vl_dSdt = viennacl::linalg::solve(vl_A,
     // bb, deposition_flux_custom_cg);
     viennacl::copy(vl_dSdt, dSdt);
