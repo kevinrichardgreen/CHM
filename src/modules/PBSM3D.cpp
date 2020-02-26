@@ -1016,6 +1016,8 @@ void PBSM3D::run(mesh domain)
     std::vector<vcl_scalar_type> x(vl_x.size());
     viennacl::copy(vl_x,x);
 
+    LOG_DEBUG << "  Suspension_GMRES # of iterations: " << gmres_tag.iters();
+    LOG_DEBUG << "  Suspension_GMRES final residual : " << gmres_tag.error();
 
 #pragma omp parallel for
     for (size_t i = 0; i < domain->size_faces(); i++)
@@ -1153,6 +1155,9 @@ void PBSM3D::run(mesh domain)
     viennacl::vector<vcl_scalar_type> vl_dSdt = viennacl::linalg::solve(vl_A, bb, gmres_tag,chow_patel_ilu2);
     std::vector<vcl_scalar_type> dSdt(vl_dSdt.size());
     viennacl::copy(vl_dSdt,dSdt);
+
+    LOG_DEBUG << "  Deposition_flux_GMRES # of iterations: " << gmres_tag.iters();
+    LOG_DEBUG << "  Deposition_flux_GMRES final residual : " << gmres_tag.error();
 
 #pragma omp parallel for
     for (size_t i = 0; i < domain->size_faces(); i++)
