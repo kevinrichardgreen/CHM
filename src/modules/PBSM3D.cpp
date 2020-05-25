@@ -1897,8 +1897,8 @@ if (suspension_present) {
     // RCP<MV> tri_Arhs = reader_type::readDenseFile("Arhs.mm", comm, mapA);
 
 
-    auto numIters = deposition_solver->getNumIters();
-    auto residual = deposition_solver->achievedTol();
+    numIters = deposition_solver->getNumIters();
+    residual = deposition_solver->achievedTol();
     LOG_DEBUG << "deposition iterations: " << numIters << " residual: " << residual;
 
     auto deposition_array = deposition_solution->get1dView();

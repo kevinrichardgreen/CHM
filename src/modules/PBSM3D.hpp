@@ -232,11 +232,13 @@ private:
     // Trilinos data structures for linear solves
     RCP<crs_matrix_type> suspension_matrix;
     RCP<MV> suspension_rhs, suspension_solution;
+    RCP<problem_type> suspension_problem;
     RCP<solver_type> suspension_solver;
     RCP<prec_type> suspension_preconditioner;
 
     RCP<crs_matrix_type> deposition_matrix;
     RCP<MV> deposition_rhs, deposition_solution;
+    RCP<problem_type> deposition_problem;
     RCP<solver_type> deposition_solver;
     RCP<prec_type> deposition_preconditioner;
 
