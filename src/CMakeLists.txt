@@ -198,6 +198,9 @@ else()
 endif()
 
 
+include_directories(${HEADER_FILES} ${EXT_HEADER_FILES})
+
+link_directories(${TBB_LIBRARY_DIRS} ${trilinos_LIB_DIRS}) # as per https://code.google.com/p/findtbb/wiki/HowTo
 add_executable(
 		CHM
 		main.cpp # this needs to be here so we can reuse CHM_SRCS in the gtest build. but since it links it's own main, we cannot have this one.
