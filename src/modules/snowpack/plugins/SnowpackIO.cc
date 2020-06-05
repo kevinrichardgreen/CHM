@@ -54,7 +54,7 @@ SnowpackIO::SnowpackIO(const SnowpackConfig& cfg):
 	} else if (in_snow == "SMET") {
 		input_snow_as_smet = true;
 	} else
-		throw InvalidArgumentException("Invalid input snow profile format '"+in_snow+"'. Please choose from SMET, CAAML, SNOOLD", AT);
+		throw InvalidArgumentException("Invalid input snow profile format '"+in_snow+"'. Please choose from SMET, CAAML, SNOOLD", MetAT);
 
 	//Format of transitional and final snow profile(s):
 	const string out_snow = cfg.get("SNOW", "Output");
@@ -71,11 +71,11 @@ SnowpackIO::SnowpackIO(const SnowpackConfig& cfg):
 		vecExtension.push_back("haz");	//Snow-cover profile file (I/O)
 		vecExtension.push_back("sno");	//Snow-cover profile file (I/O)
 	} else
-		throw InvalidArgumentException("Invalid output snow profile format '"+out_snow+"'. Please choose from SMET, CAAML, SNOOLD", AT);
+		throw InvalidArgumentException("Invalid output snow profile format '"+out_snow+"'. Please choose from SMET, CAAML, SNOOLD", MetAT);
 
 	std::vector<string> vecProfileFmt = cfg.get("PROF_FORMAT", "Output");
 	if (vecProfileFmt.size() > 3) {
-		throw InvalidArgumentException("The key PROF_FORMAT in [Output] can take three values at most", AT);
+		throw InvalidArgumentException("The key PROF_FORMAT in [Output] can take three values at most", MetAT);
 	} else {
 		for (size_t ii=0; ii<vecProfileFmt.size(); ii++) {
 			if (vecProfileFmt[ii] == "PRO") {
@@ -89,7 +89,7 @@ SnowpackIO::SnowpackIO(const SnowpackConfig& cfg):
 			} else if (vecProfileFmt[ii] == "IMIS") {
 				output_prf_as_imis  = true;
 			} else {
-				throw InvalidArgumentException("The key PROF_FORMAT in [Output] takes only PRO, PRF or IMIS as value", AT);
+				throw InvalidArgumentException("The key PROF_FORMAT in [Output] takes only PRO, PRF or IMIS as value", MetAT);
 			}
 		}
 	}
@@ -105,9 +105,9 @@ SnowpackIO::SnowpackIO(const SnowpackConfig& cfg):
 			output_ts_as_ascii = true;
 			vecExtension.push_back("met");	//Classical time series (meteo, snow temperatures, etc.)
 		} else
-			throw InvalidArgumentException("The key TS_FORMAT in [Output] takes only SMET or MET as value", AT);
+			throw InvalidArgumentException("The key TS_FORMAT in [Output] takes only SMET or MET as value", MetAT);
 	}
-	
+
 	vecExtension.push_back("ini");	//Record of run configuration
 
 	//set the "plugins" pointers

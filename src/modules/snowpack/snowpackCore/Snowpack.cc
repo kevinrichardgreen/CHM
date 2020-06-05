@@ -185,7 +185,7 @@ Snowpack::Snowpack(const SnowpackConfig& i_cfg)
 	 * - 1: 0.02 */
 	cfg.getValue("HEIGHT_NEW_ELEM", "SnowpackAdvanced", height_new_elem);
 	cfg.getValue("MINIMUM_L_ELEMENT", "SnowpackAdvanced", minimum_l_element);
-	if(minimum_l_element<=0.) throw IOException("MINIMUM_L_ELEMENT must be >0! Please fix your ini file.", AT);
+	if(minimum_l_element<=0.) throw IOException("MINIMUM_L_ELEMENT must be >0! Please fix your ini file.", MetAT);
 
 	cfg.getValue("RESEARCH", "SnowpackAdvanced", research_mode);
 
@@ -403,7 +403,7 @@ void Snowpack::compSnowCreep(const CurrentMeteo& Mdata, SnowStation& Xdata)
 			prn_msg(__FILE__, __LINE__, "err", Date(),
 			          "Volume contents: e=%d nE=%d rho=%lf ice=%lf wat=%lf air=%le",
 			            e, nE, EMS[e].Rho, EMS[e].theta[ICE], EMS[e].theta[WATER], EMS[e].theta[AIR]);
-			throw IOException("Runtime Error in compSnowCreep()", AT);
+			throw IOException("Runtime Error in compSnowCreep()", MetAT);
 		}
 	}
 	// Update computed snow depth
@@ -853,19 +853,19 @@ bool Snowpack::compTemperatureProfile(const CurrentMeteo& Mdata, SnowStation& Xd
 	if (errno != 0 || U==NULL) {
 		free(U);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "%s (allocating  solution vector U)", strerror(errno));
-		throw IOException("Runtime error in compTemperatureProfile", AT);
+		throw IOException("Runtime error in compTemperatureProfile", MetAT);
 	}
 	dU=(double *) realloc(dU, nN*sizeof(double));
 	if (errno != 0 || dU==NULL) {
 		free(U); free(dU);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "%s (allocating  solution vector dU)", strerror(errno));
-		throw IOException("Runtime error in compTemperatureProfile", AT);
+		throw IOException("Runtime error in compTemperatureProfile", MetAT);
 	}
 	ddU=(double *) realloc(ddU, nN*sizeof(double));
 	if (errno != 0 || ddU==NULL) {
 		free(U); free(dU); free(ddU);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "%s (allocating  solution vector ddU)", strerror(errno));
-		throw IOException("Runtime error in compTemperatureProfile", AT);
+		throw IOException("Runtime error in compTemperatureProfile", MetAT);
 	}
 
 	// Make sure that the global data structures know where the pointers are for the next integration step after the reallocation ....
@@ -914,7 +914,7 @@ bool Snowpack::compTemperatureProfile(const CurrentMeteo& Mdata, SnowStation& Xd
 				prn_msg(__FILE__, __LINE__, "msg", Date(), "At node n=%d (nN=%d, SoilNode=%d): T=%.2lf", n, nN, Xdata.SoilNode, U[n]);
 
 				free(U); free(dU); free(ddU);
-				throw IOException("Runtime error in compTemperatureProfile", AT);
+				throw IOException("Runtime error in compTemperatureProfile", MetAT);
 			}
 		}
 	}
@@ -962,7 +962,7 @@ bool Snowpack::compTemperatureProfile(const CurrentMeteo& Mdata, SnowStation& Xd
 				for (size_t n = 0; n < nN; n++)
 					fprintf(stdout, "U[%u]=%g K\n", (unsigned int)n, U[n]);
 				free(U); free(dU); free(ddU);
-				throw IOException("Runtime error in compTemperatureProfile", AT);
+				throw IOException("Runtime error in compTemperatureProfile", MetAT);
 			}
 			ds_AssembleMatrix( (SD_MATRIX_DATA*)Kt, 2, Ie, 2,  (double*) Se );
 			EL_RGT_ASSEM( dU, Ie, Fe );
@@ -1056,7 +1056,7 @@ bool Snowpack::compTemperatureProfile(const CurrentMeteo& Mdata, SnowStation& Xd
 				        "Latent: %lf  Sensible: %lf  Rain: %lf  NetLong:%lf  NetShort: %lf",
 				        Bdata.ql, Bdata.qs, Bdata.qr, Bdata.lw_net, I0);
 				free(U); free(dU); free(ddU);
-				throw IOException("Runtime error in compTemperatureProfile", AT);
+				throw IOException("Runtime error in compTemperatureProfile", MetAT);
 			} else {
 				TempEqConverged = false;	// Set return value of function
 				NotConverged = false;		// Ensure we leave the do...while loop
@@ -1649,7 +1649,7 @@ void Snowpack::runSnowpackModel(CurrentMeteo Mdata, SnowStation& Xdata, double& 
 	try {
 		//since precipitation phase is a little less intuitive than other, measured parameters, make sure it is provided
 		if (Mdata.psum_ph==IOUtils::nodata)
-			throw NoDataException("Missing precipitation phase", AT);
+			throw NoDataException("Missing precipitation phase", MetAT);
 
 		// Set and adjust boundary conditions
 		surfaceCode = NEUMANN_BC;
@@ -1767,7 +1767,7 @@ void Snowpack::runSnowpackModel(CurrentMeteo Mdata, SnowStation& Xdata, double& 
 					prn_msg(__FILE__, __LINE__, "msg", Date(),
 					        "Latent: %lf  Sensible: %lf  Rain: %lf  NetLong:%lf  NetShort: %lf",
 					        Bdata.ql, Bdata.qs, Bdata.qr, Bdata.lw_net, Mdata.iswr - Mdata.rswr);
-					throw IOException("Runtime error in runSnowpackModel", AT);
+					throw IOException("Runtime error in runSnowpackModel", MetAT);
 				}
 				std::cout << "                            --> time step temporarily reduced to: " << sn_dt << "\n";
 			}

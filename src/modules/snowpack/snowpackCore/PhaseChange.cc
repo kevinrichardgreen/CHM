@@ -186,7 +186,7 @@ void PhaseChange::compSubSurfaceMelt(ElementData& Edata, const unsigned int nSol
 			prn_msg(__FILE__, __LINE__, "msg-", Date(),
 			        "Ice: %f, Water: %f, Air: %f Soil: %f",
 			        Edata.theta[ICE], Edata.theta[WATER], Edata.theta[AIR], Edata.theta[SOIL]);
-			throw IOException("In compSubSurfaceMelt!", AT);
+			throw IOException("In compSubSurfaceMelt!", MetAT);
 		}
 		Edata.Rho = Constants::density_ice * Edata.theta[ICE]
 		                + (Constants::density_water * Edata.theta[WATER] )
@@ -280,7 +280,7 @@ void PhaseChange::compSubSurfaceFrze(ElementData& Edata, const unsigned int nSol
 			prn_msg(__FILE__, __LINE__, "msg-", Date(),
 			        "Ice: %f, Water: %f, Air: %f Soil: %f",
 			        Edata.theta[ICE], Edata.theta[WATER], Edata.theta[AIR], Edata.theta[SOIL]);
-			throw IOException("In compSubSurfaceFrze!", AT);
+			throw IOException("In compSubSurfaceFrze!", MetAT);
 		}
 		Edata.Rho = Constants::density_ice * Edata.theta[ICE] +
 		                (Constants::density_water * Edata.theta[WATER]) +
@@ -348,7 +348,7 @@ void PhaseChange::finalize(const SurfaceFluxes& Sdata, SnowStation& Xdata, const
 			if (EMS[e].theta[SOIL] < Constants::eps2) {
 				if (!(EMS[e].Rho > Constants::eps && EMS[e].Rho <= Constants::max_rho)) {
 					prn_msg(__FILE__, __LINE__, "err", date_in, "Phase Change End: rho_snow[%d]=%f", e, EMS[e].Rho);
-					throw IOException("Run-time error in compPhaseChange()", AT);
+					throw IOException("Run-time error in compPhaseChange()", MetAT);
 				}
 			}
 			if (e>=Xdata.SoilNode) {
@@ -440,7 +440,7 @@ double PhaseChange::compPhaseChange(SnowStation& Xdata, const mio::Date& date_in
 				}
 			} catch(...) {
 				prn_msg(__FILE__, __LINE__, "msg-", Date(), "in compSubSurfaceMelt at element %d of %d", e, nE);
-				throw IOException("Run-time error in compPhaseChange()", AT);
+				throw IOException("Run-time error in compPhaseChange()", MetAT);
 			}
 			// See whether hoar has melted
 			if (EMS[e].theta[WATER] > cmp_theta + Constants::eps) {
@@ -455,7 +455,7 @@ double PhaseChange::compPhaseChange(SnowStation& Xdata, const mio::Date& date_in
 				}
 			} catch(...) {
 				prn_msg(__FILE__, __LINE__, "msg-", date_in, "SubSurfaceFrze at element %d of %d", e, nE);
-				throw IOException("Run-time error in compPhaseChange()", AT);
+				throw IOException("Run-time error in compPhaseChange()", MetAT);
 			}
 
 			// Make sure all nodal temperatures are consistent with the temperature change of the element
@@ -567,7 +567,7 @@ double PhaseChange::compPhaseChange(SnowStation& Xdata, const mio::Date& date_in
 								NDS[e-1].T=std::min(NDS[e-1].T, EMS[e-1].freezing_tk);
 							}
 						}
-						
+
 						// Recalculate the element temperature of the affected nodes
 						EMS[e].Te=0.5*(NDS[e].T+NDS[e+1].T);
 						if(e < nE-1) EMS[e+1].Te=0.5*(NDS[e+1].T+NDS[e+2].T);
@@ -656,4 +656,3 @@ double PhaseChange::compPhaseChange(SnowStation& Xdata, const mio::Date& date_in
 
 	return retTopNodeT;
 }
-

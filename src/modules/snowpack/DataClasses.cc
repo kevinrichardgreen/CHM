@@ -196,7 +196,7 @@ std::vector<SnowProfileLayer> SnowProfileLayer::generateProfile(const mio::Date&
 	const std::vector<ElementData>& EMS = Xdata.Edata;
 	const double cos_sl = Xdata.cos_sl;
 	const bool surf_hoar = (NDS[nE].hoar > (hoar_density_surf * MM_TO_M(hoar_min_size_surf)));
-	
+
 	// Generate the profile data from the element data (1 layer = 1 element)
 	unsigned char snowloc = 0;
 	string mystation = Xdata.meta.getStationID();
@@ -215,7 +215,7 @@ std::vector<SnowProfileLayer> SnowProfileLayer::generateProfile(const mio::Date&
 		Pdata[ll].stationname = mystation;
 		Pdata[ll].loc_for_snow = snowloc;
 		Pdata[ll].loc_for_wind = 1;
-		
+
 		// Write snow layer data
 		if (ll < nE) {
 			Pdata[ll].generateLayer(EMS[e], NDS[e+1]);
@@ -911,7 +911,7 @@ double ElementData::getYoungModule(const double& rho_slab, const Young_Modulus& 
 			return E;
 		}
 		default:
-			throw mio::UnknownValueException("Selected Young's modulus model has not been implemented", AT);
+			throw mio::UnknownValueException("Selected Young's modulus model has not been implemented", MetAT);
 	}
 }
 
@@ -1572,7 +1572,7 @@ void SnowStation::resize(const size_t& number_of_elements)
 		Edata.resize(number_of_elements);
 		Ndata.resize(number_of_elements + 1);
 	}catch(const exception& e){
-		throw IOException(e.what(), AT); //this will catch all allocation exceptions
+		throw IOException(e.what(), MetAT); //this will catch all allocation exceptions
 	}
 
 	nElems = Edata.size();
@@ -1795,7 +1795,7 @@ void SnowStation::initialize(const SN_SNOWSOIL_DATA& SSdata, const size_t& i_sec
 
 	if (SoilNode == 0 && useSoilLayers) {
 		prn_msg(__FILE__, __LINE__, "err", Date(), "SNP_SOIL set but no soil layers given");
-		throw IOException("Snowpack Initialization failed", AT);
+		throw IOException("Snowpack Initialization failed", MetAT);
 	}
 
 	// INITIALIZE THE ELEMENT DATA
@@ -1914,7 +1914,7 @@ void SnowStation::initialize(const SN_SNOWSOIL_DATA& SSdata, const size_t& i_sec
 		Cdata.direct_throughfall = SSdata.Canopy_Direct_Throughfall;
 		if (SSdata.Canopy_Direct_Throughfall < 0. || SSdata.Canopy_Direct_Throughfall > 1.) {
 			prn_msg(__FILE__, __LINE__, "err", Date(), "Invalid Canopy Throughfall (%lf) given in sno file! It should be between 0 and 1.", SSdata.Canopy_Direct_Throughfall);
-			throw IOException("Snowpack Initialization failed", AT);
+			throw IOException("Snowpack Initialization failed", MetAT);
 		}
 	} else {
 		Cdata.BasalArea = 0.0;

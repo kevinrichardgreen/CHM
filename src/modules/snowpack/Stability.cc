@@ -78,10 +78,10 @@ Stability::Stability(const SnowpackConfig& cfg, const bool& i_classify_profile)
 	cfg.getValue("SSI_IS_RTA", "SnowpackAdvanced", RTA_ssi); //HACK: temporary key until we decide for a permanent solution
 
 	const map<string, StabMemFn>::const_iterator it1 = mapHandHardness.find(hardness_parameterization);
-	if (it1 == mapHandHardness.end()) throw InvalidArgumentException("Unknown hardness parameterization: "+hardness_parameterization, AT);
+	if (it1 == mapHandHardness.end()) throw InvalidArgumentException("Unknown hardness parameterization: "+hardness_parameterization, MetAT);
 
 	const map<string, StabFnShearStrength>::const_iterator it2 = mapShearStrength.find(strength_model);
-	if (it2 == mapShearStrength.end()) throw InvalidArgumentException("Unknown strength model: "+strength_model, AT);
+	if (it2 == mapShearStrength.end()) throw InvalidArgumentException("Unknown strength model: "+strength_model, MetAT);
 
 	cfg.getValue("PLASTIC", "SnowpackAdvanced", plastic); //To build a sandwich with a non-snow layer (plastic or wood chips) on top;
 
@@ -172,7 +172,7 @@ void Stability::checkStability(const CurrentMeteo& Mdata, SnowStation& Xdata)
 		EMS[e].hard = (mapHandHardness[hardness_parameterization])(EMS[e], hoar_density_buried);
 		EMS[e].S_dr = StabilityAlgorithms::setDeformationRateIndex(EMS[e]);
 		StabilityData  STpar(Stability::psi_ref);
-		
+
 		//update slab properties
 		const double hi = EMS[e].L;
 		slab_thick += hi;			//Increment slab depth

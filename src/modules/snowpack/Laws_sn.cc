@@ -371,7 +371,7 @@ double SnLaws::parameterizedSnowAlbedo(const std::string& i_snow_albedo, const s
 		else if (i_albAverageSchmucki == "CUSTOM")
 			av = 0.74824; // mean of single averages @ WFJ, DAV, and PAY
 		else
-			throw UnknownValueException("Invalid average value chosen for the \'"+i_albedo_parameterization+"\' parametrization: \'"+i_albAverageSchmucki+"\'", AT);
+			throw UnknownValueException("Invalid average value chosen for the \'"+i_albedo_parameterization+"\' parametrization: \'"+i_albAverageSchmucki+"\'", MetAT);
 
 		static const double inter = 1.178904;
 		static const double Cms = -5.691804e-02, Cage = -2.840603e-04, Crg = -1.029158e-01, Crho = -5.030213e-04, Cswin = -6.780479e-5;
@@ -392,7 +392,7 @@ double SnLaws::parameterizedSnowAlbedo(const std::string& i_snow_albedo, const s
 		else if (i_albAverageSchmucki == "CUSTOM")
 			av = 0.74824; // Mean of single regressions @ WFJ, DAV, PAY, and NAP
 		else
-			throw UnknownValueException("Invalid average value chosen for the \'"+i_albedo_parameterization+"\' parametrization: \'"+i_albAverageSchmucki+"\'", AT);
+			throw UnknownValueException("Invalid average value chosen for the \'"+i_albedo_parameterization+"\' parametrization: \'"+i_albAverageSchmucki+"\'", MetAT);
 
 		static const double inter = 1.148088;
 		static const double Cms = -4.412422e-02, Cage = -1.523871e-03, Cogs = -1.099020e-01, Crho = -3.638010e-04, Cswin = -7.140708e-05;
@@ -426,7 +426,7 @@ double SnLaws::parameterizedSnowAlbedo(const std::string& i_snow_albedo, const s
 	}
 	else {
 		prn_msg(__FILE__, __LINE__, "err", Date(), "Albedo parameterization %s not implemented yet!", i_albedo_parameterization.c_str());
-		throw IOException("The required snow albedo model is not implemented yet!", AT);
+		throw IOException("The required snow albedo model is not implemented yet!", MetAT);
 	}
 
 	return(Alb);
@@ -479,7 +479,7 @@ void SnLaws::compShortWaveAbsorption(const std::string& i_sw_absorption_scheme, 
 		if (EMS[e].sw_abs < 0.) {
 			prn_msg(__FILE__, __LINE__, "err", Date(), "NEGATIVE Shortwave Radiation %lf absorbed by element %d (nE=%d)",
 				   EMS[e].sw_abs, e, nE);
-			throw IOException("SnLaws::compShortWaveAbsorption did not complete successfully", AT);
+			throw IOException("SnLaws::compShortWaveAbsorption did not complete successfully", MetAT);
 		}
 	}
 }
@@ -918,7 +918,7 @@ double SnLaws::newSnowDensityEvent(const std::string& variant, const SnLaws::Eve
 		default:
 			prn_msg(__FILE__, __LINE__,"err", Date(),
 				"No new snow density parameterization for event type %d", i_event);
-			throw IOException("Event type not implemented yet!", AT);
+			throw IOException("Event type not implemented yet!", MetAT);
 	}
 }
 
@@ -1112,7 +1112,7 @@ double SnLaws::snowViscosityTemperatureTerm(const double& Te)
 		return (9. - 8.7 * exp(0.015 * (Te - Constants::melting_tk)));
 	}
 
-	throw UnknownValueException("Unknown viscosity temperature dependency selected!", AT);
+	throw UnknownValueException("Unknown viscosity temperature dependency selected!", MetAT);
 }
 
 /**
@@ -1179,7 +1179,7 @@ double SnLaws::loadingRateStressCALIBRATION(ElementData& Edata, const mio::Date&
 
 	//this should not be reached...
 	prn_msg(__FILE__, __LINE__, "err", Date(), "visc=%d not a valid choice for loadingRateStress!", visc);
-	throw IOException("Choice not implemented yet!", AT);
+	throw IOException("Choice not implemented yet!", MetAT);
 }
 
 /**
@@ -1291,7 +1291,7 @@ double SnLaws::snowViscosityFudgeCALIBRATION(const ElementData& Edata, const mio
 	default:
 		prn_msg(__FILE__, __LINE__, "err", Date(),
 		        "visc=%d not a valid choice for SnowViscosityFudge!", visc);
-		throw IOException("Choice not implemented yet!", AT);
+		throw IOException("Choice not implemented yet!", MetAT);
 	}
 
 	if (use_thresh) { // Default false
@@ -1327,7 +1327,7 @@ double SnLaws::compSnowViscosity(const std::string& variant, const std::string& 
 	} else if (i_viscosity_model == "DEFAULT") {
 		return snowViscosityDEFAULT(Edata);
 	} else {
-		throw InvalidArgumentException("Unknown viscosity model: "+i_viscosity_model, AT);
+		throw InvalidArgumentException("Unknown viscosity model: "+i_viscosity_model, MetAT);
 	}
 }
 

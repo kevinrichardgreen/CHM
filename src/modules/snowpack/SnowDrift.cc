@@ -102,7 +102,7 @@ double SnowDrift::compMassFlux(const ElementData& Edata, const double& ustar, co
 	double Qsalt = 0., Qsusp = 0., c_salt; // The mass fluxes in saltation and suspension (kg m-1 s-1)
 	if (!saltation.compSaltation(tau, tau_thresh, slope_angle, MM_TO_M(2.*Edata.rg), Qsalt, c_salt)) {
 		prn_msg(__FILE__, __LINE__, "err", Date(), "Saltation computation failed");
-		throw IOException("Saltation computation failed", AT);
+		throw IOException("Saltation computation failed", MetAT);
 	}
 
 	if (Qsalt > 0.) {

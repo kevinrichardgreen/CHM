@@ -251,7 +251,7 @@ void SnowpackConfig::setDefaults()
 		string min_depth_subsurf; getValue("MIN_DEPTH_SUBSURF", "SnowpackAdvanced", min_depth_subsurf);
 		if (min_depth_subsurf.empty()) addKey("MIN_DEPTH_SUBSURF", "SnowpackAdvanced", "0.0");
 	} else {
-		throw UnknownValueException("Unknown variant " + variant, AT);
+		throw UnknownValueException("Unknown variant " + variant, MetAT);
 	}
 
 	/* For all parameters not set by the user or by the initialization above, the default values apply

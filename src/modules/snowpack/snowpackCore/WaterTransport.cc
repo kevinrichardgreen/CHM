@@ -61,7 +61,7 @@ WaterTransport::WaterTransport(const SnowpackConfig& cfg)
 	 * - r242: HOAR_THRESH_VW set to 3.5
 	 */
 	cfg.getValue("HOAR_THRESH_VW", "SnowpackAdvanced", hoar_thresh_vw);
-	
+
 	/**
 	 * @brief No surface hoar will form at air temperatures above threshold (m s-1)
 	 * - Originaly, using THRESH_RAIN
@@ -470,7 +470,7 @@ void WaterTransport::compSurfaceSublimation(const CurrentMeteo& Mdata, double ql
 					EMS[nE-1].Rho = (EMS[nE-1].theta[ICE] * Constants::density_ice) + (EMS[nE-1].theta[WATER] * Constants::density_water) + (EMS[nE-1].theta[SOIL] * EMS[nE-1].soil[SOIL_RHO]);
 				}
 			}
-			
+
 			//check that thetas and densities are consistent
 			assert(EMS[e].theta[SOIL] >= (-Constants::eps2) && EMS[e].theta[SOIL] <= (1.+Constants::eps2));
 			assert(EMS[e].theta[ICE] >= (-Constants::eps2) && EMS[e].theta[ICE]<=(1.+Constants::eps2));
@@ -580,7 +580,7 @@ void WaterTransport::mergingElements(SnowStation& Xdata, SurfaceFluxes& Sdata)
 		const bool do_merge = (EMS[eUpper].theta[ICE] <= Snowpack::min_ice_content) || enforce_merge;
 		const bool is_snow_layer = (EMS[eUpper].theta[SOIL] < Constants::eps2) && (EMS[eUpper].mk % 100 != 9); //exclude plastic or water_layer
 		const bool wet_layer_exception = (eUpper > 0 && eUpper == nE-1 && EMS[eUpper].theta[ICE] > 0.2 * Snowpack::min_ice_content && EMS[eUpper].L > 0.2 * minimum_l_element && EMS[eUpper-1].theta[SOIL] < Constants::eps && EMS[eUpper].theta[ICE] > Constants::eps && EMS[eUpper].theta[WATER] < theta_r + Constants::eps && EMS[eUpper-1].theta[WATER] > theta_r + Constants::eps); // Don't merge a dry surface snow layer with a wet one below, as the surface node may then experience a sudden increase in temperature, destroying energy balance.
-		
+
 		if (do_merge && is_snow_layer && !wet_layer_exception) {
 			bool UpperJoin=false;			// Default is joining with elements below
 			bool merged = true;		// true: element is finally merged, false: element is finally removed.
@@ -752,7 +752,7 @@ void WaterTransport::adjustDensity(SnowStation& Xdata)
 		if (!(EMS[e].Rho > Constants::min_rho && EMS[e].Rho <= Constants::max_rho)) {
 			prn_msg(__FILE__, __LINE__, "err", Date(), "Volume contents: e:%d nE:%d rho:%lf ice:%lf wat:%lf air:%le",
 			        e, nE, EMS[e].Rho, EMS[e].theta[ICE], EMS[e].theta[WATER], EMS[e].theta[AIR]);
-			throw IOException("Cannot evaluate mass balance in adjust density routine", AT);
+			throw IOException("Cannot evaluate mass balance in adjust density routine", MetAT);
 		}
 	}
 	const double cH_old = Xdata.cH;
@@ -944,7 +944,7 @@ void WaterTransport::transportWater(const CurrentMeteo& Mdata, SnowStation& Xdat
 							prn_msg(__FILE__, __LINE__, "err", Mdata.date,
 								"Volume contents: e:%d nE:%d rho:%lf ice:%lf wat:%lf air:%le",
 								eUpper, nE, EMS[eUpper].Rho, EMS[eUpper].theta[ICE], EMS[eUpper].theta[WATER], EMS[eUpper].theta[AIR]);
-							throw IOException("Cannot transfer water within the snowpack in transportWater()", AT);
+							throw IOException("Cannot transfer water within the snowpack in transportWater()", MetAT);
 						}
 					}
 				}
@@ -1078,7 +1078,7 @@ void WaterTransport::transportWater(const CurrentMeteo& Mdata, SnowStation& Xdat
 									prn_msg(__FILE__, __LINE__, "err", Mdata.date,
 										"Volume contents: e:%d nE:%d rho:%lf ice:%lf wat:%lf air:%le",
 										eUpper, nE, EMS[eUpper].Rho, EMS[eUpper].theta[ICE], EMS[eUpper].theta[WATER], EMS[eUpper].theta[AIR]);
-									throw IOException("Cannot transfer water within the snowpack in transportWater()", AT);
+									throw IOException("Cannot transfer water within the snowpack in transportWater()", MetAT);
 								}
 							}
 							// Update snowpack runoff with soil. Note: in case of no soil layers, or lowest soil element: the runoff for the lowest element is updated outside the loop.
@@ -1107,7 +1107,7 @@ void WaterTransport::transportWater(const CurrentMeteo& Mdata, SnowStation& Xdat
 									prn_msg(__FILE__, __LINE__, "err", Mdata.date,
 										"Volume contents: e:%d nE:%d rho:%lf ice:%lf wat:%lf air:%le",
 										eUpper, nE, EMS[eUpper].Rho, EMS[eUpper].theta[ICE], EMS[eUpper].theta[WATER], EMS[eUpper].theta[AIR]);
-									throw IOException("Cannot transfer water within the snowpack in transportWater()", AT);
+									throw IOException("Cannot transfer water within the snowpack in transportWater()", MetAT);
 								}
 							}
 						}

@@ -471,9 +471,8 @@ bool Saltation::compSaltation(const double& i_tauS, const double& tau_th, const 
 	}
 	else {
 		prn_msg(__FILE__, __LINE__, "err", Date(), "Saltation model %s not implemented yet!", saltation_model.c_str());
-		throw IOException("The required saltation model is not implemented yet!", AT);
+		throw IOException("The required saltation model is not implemented yet!", MetAT);
 	}
 
 	return true;
 }
-

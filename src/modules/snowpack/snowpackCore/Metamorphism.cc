@@ -237,11 +237,11 @@ Metamorphism::Metamorphism(const SnowpackConfig& cfg)
 
 	const map<string, MetaModelFn>::const_iterator it1 = mapMetamorphismModel.find(metamorphism_model);
 	if (it1 == mapMetamorphismModel.end())
-		throw InvalidArgumentException("Unknown metamorphism model: "+metamorphism_model, AT);
+		throw InvalidArgumentException("Unknown metamorphism model: "+metamorphism_model, MetAT);
 
 	const map<string, MetaSpRateFn>::const_iterator it2 = mapSpRate.find(metamorphism_model);
 	if (it2 == mapSpRate.end())
-		throw InvalidArgumentException("Unknown metamorphism model: "+metamorphism_model, AT);
+		throw InvalidArgumentException("Unknown metamorphism model: "+metamorphism_model, MetAT);
 }
 
 /**

@@ -37,7 +37,7 @@ using namespace std;
  * @date 2012-06-27
  * @param F grain type
  * @param rho snow density
- * @param water_content 
+ * @param water_content
  * @param buried_hoar_density density of the burried hoar (kg m-3)
  * @return hand hardness index (1)
  */
@@ -146,7 +146,7 @@ double StabilityAlgorithms::getHandHardnessMONTI(const int& F, const double& rho
 		default: {
 			std::stringstream ss;
 			ss << "Error: grain type " << F << " is unknown!";
-			throw IOException(ss.str(), AT);
+			throw IOException(ss.str(), MetAT);
 		}
 	}
 }
@@ -560,8 +560,8 @@ double StabilityAlgorithms::getNaturalStability(const StabilityData& STpar)
  * @brief Returns the skier stability index Sk reduced to psi_ref (usually 38 deg => Sk_38)
  * The classic skier stability index Sk(psi_ref), using P. Foehn's formula
  * (IAHS No162, 1987, p201) for the skier (load of 85 kg on 1.7 m long skis) induced shear stress.
- * 
- * This represents the skier contribution to shear stress at psi_ref and is around 0.1523 kPa / layer_depth 
+ *
+ * This represents the skier contribution to shear stress at psi_ref and is around 0.1523 kPa / layer_depth
  * at psi_ref = 38 deg and Alpha_max = 54.3 deg.
  * @param Pk Skier penetration depth (m)
  * @param depth_lay Depth of layer to investigate (m)
@@ -591,7 +591,7 @@ bool StabilityAlgorithms::normalizeLemon(std::vector<double>& vecData)
 	const double mean = mio::Interpol1D::arithmeticMean( vecData );
 	const double std_dev = mio::Interpol1D::std_dev( vecData );
 	if (std_dev==IOUtils::nodata || std_dev==0.) return false;
-	
+
 	for (size_t ii=0; ii<vecData.size(); ii++) {
 		vecData[ii] = (vecData[ii] - mean) / std_dev;
 	}
@@ -599,8 +599,8 @@ bool StabilityAlgorithms::normalizeLemon(std::vector<double>& vecData)
 }
 
 /**
- * @brief Returns the Relative Threshold Sum approach  (RTA) weak layer. 
- * This is according to Monti, Fabiano, and Jürg Schweizer, <i>"A relative difference 
+ * @brief Returns the Relative Threshold Sum approach  (RTA) weak layer.
+ * This is according to Monti, Fabiano, and Jürg Schweizer, <i>"A relative difference
  * approach to detect potential weak layers within a snow profile"</i>, 2013, Proceedings ISSW.
  * @param Xdata all the element and node data for all the layers
  * @return false if error, true otherwise
@@ -611,21 +611,21 @@ bool StabilityAlgorithms::getRelativeThresholdSum(SnowStation& Xdata)
 	vector<ElementData>& EMS = Xdata.Edata;
 	const size_t nE = EMS.size();
 	size_t e = nE;
-	
+
 	const double cos_sl = Xdata.cos_sl;
 	const double hs_top = (NDS[e].z+NDS[e].u - NDS[Xdata.SoilNode].z) / cos_sl;
 	std::vector<double> vecRG, vecRG_diff, vecHard, vecHard_diff, vecTypes;
 	std::vector<double> weibull, crust_index;
-	
+
 	double crust_coeff = 0.;
 	while (e-- > Xdata.SoilNode) {
 		NDS[ e ].ssi = 0.; //initialize with 0 so layers that can not get computed don't t in the way
-		
+
 		vecRG.push_back( EMS[e].rg );
 		vecRG_diff.push_back( fabs(EMS[e+1].rg - EMS[e].rg) );
 		vecHard.push_back( EMS[e].hard );
 		vecHard_diff.push_back( fabs(EMS[e+1].hard - EMS[e].hard) );
-		
+
 		//grain types receive a score depending on their primary and secondary forms
 		const unsigned short int primary = static_cast<unsigned short int>( EMS[e].type / 100 %100 );
 		const unsigned short int secondary = static_cast<unsigned short int>( EMS[e].type / 10 %10 );
@@ -637,50 +637,50 @@ bool StabilityAlgorithms::getRelativeThresholdSum(SnowStation& Xdata)
 			vecTypes.push_back( 0. );
 		else
 			vecTypes.push_back( .5 );
-		
+
 		//compute the weibull function for the depth from the top
 		const double layer_depth = hs_top - (NDS[e].z+NDS[e].u - NDS[Xdata.SoilNode].z)/cos_sl;
 		static const double w1 = 2.5;
 		static const double w2 = 50.;
 		const double weibull_depth = (w1/w2) * pow(layer_depth, w1-1.) * exp( -1*pow(layer_depth/w2, w1) );
-		
+
 		//compute crust factor
 		const bool crust_cond = (EMS[e].L>=1. && EMS[e].hard>=3 );
 		const double crust_value = (crust_cond)? exp( -(hs_top -  (NDS[e+1].z+NDS[e+1].u - NDS[Xdata.SoilNode].z)/cos_sl/20. ) ) : 0.;
 		crust_coeff += crust_value;
 		weibull.push_back( weibull_depth - crust_coeff ); //store the weibull corrected for the crust coefficient
 	}
-	
+
 	//calculate the normalization parameters
 	if (!normalizeLemon(vecRG)) return false;
 	const double RG_min = mio::Interpol1D::min_element( vecRG );
 	const double RG_max = mio::Interpol1D::max_element( vecRG );
 	if (RG_min==RG_max) return false;
-	
+
 	if (!normalizeLemon(vecRG_diff)) return false;
 	const double RG_diff_min = mio::Interpol1D::min_element( vecRG_diff );
 	const double RG_diff_max = mio::Interpol1D::max_element( vecRG_diff );
 	if (RG_diff_min==RG_diff_max) return false;
-	
+
 	if (!normalizeLemon(vecHard)) return false;
 	const double hard_min = mio::Interpol1D::min_element( vecHard );
 	const double hard_max = mio::Interpol1D::max_element( vecHard );
 	if (hard_min==hard_max) return false;
-	
+
 	if (!normalizeLemon(vecHard_diff)) return false;
 	const double hard_diff_min = mio::Interpol1D::min_element( vecHard_diff );
 	const double hard_diff_max = mio::Interpol1D::max_element( vecHard_diff );
 	if (hard_diff_min==hard_diff_max) return false;
-	
+
 	if (!normalizeLemon(vecTypes)) return false;
 	const double type_min = mio::Interpol1D::min_element( vecTypes );
 	const double type_max = mio::Interpol1D::max_element( vecTypes );
 	if (type_min==type_max) return false;
-	
+
 	const double dp_min = mio::Interpol1D::min_element( weibull );
 	const double dp_max = mio::Interpol1D::max_element( weibull );
 	if (dp_min==dp_max) return false;
-	
+
 	vector<double> index;
 	double max_index = 0.;
 	for (size_t ii=0; ii<vecRG.size(); ii++) {
@@ -690,15 +690,15 @@ bool StabilityAlgorithms::getRelativeThresholdSum(SnowStation& Xdata)
 		const double hard_diff_norm = (vecHard_diff[ii] - hard_diff_min) / (hard_diff_max - hard_diff_min);
 		const double type_norm = (vecTypes[ii] - type_min) / (type_max - type_min);
 		const double dp_norm = (weibull[ii] - dp_min) / (dp_max - dp_min);
-		
+
 		index.push_back( RG_norm + RG_diff_norm + hard_norm + hard_diff_norm + type_norm + dp_norm );
 		if (index.back()>max_index) max_index = index.back();
 	}
-	
+
 	for (size_t ii=0; ii<vecRG.size(); ii++) {
 		NDS[ nE - ii ].ssi = index[ii] / max_index;
 	}
-	
+
 	return true;
 }
 
@@ -817,7 +817,7 @@ bool StabilityAlgorithms::classifyStability_SchweizerWiesinger(SnowStation& Xdat
 
 /**
  * @brief Returns the Profile Stability Classification based on re-analysis after <b>recalibration of settling</b> (Nov. 2007)
- * This is based on Schweizer, J., Bellaire, S., Fierz, C., Lehning, M. and Pielmeier, C., <i>"Evaluating and improving the 
+ * This is based on Schweizer, J., Bellaire, S., Fierz, C., Lehning, M. and Pielmeier, C., <i>"Evaluating and improving the
  * stability predictions of the snow cover model SNOWPACK"</i>, Cold Regions Science and Technology, 2006, <b>46(1)</b>, pp.52-59.
  * @param Swl_ssi
  * @param Swl_lemon
@@ -849,7 +849,7 @@ void StabilityAlgorithms::classifyStability_SchweizerBellaire2(const double& Swl
 
 /**
  * @brief Returns the Profile Stability Classification based on re-analysis by Schweizer/Bellaire, see
- * Schweizer, J., Bellaire, S., Fierz, C., Lehning, M. and Pielmeier, C., <i>"Evaluating and improving the 
+ * Schweizer, J., Bellaire, S., Fierz, C., Lehning, M. and Pielmeier, C., <i>"Evaluating and improving the
  * stability predictions of the snow cover model SNOWPACK"</i>, Cold Regions Science and Technology, 2006, <b>46(1)</b>, pp.52-59.
  * @param Swl_ssi
  * @param Swl_Sk38
@@ -871,7 +871,7 @@ void StabilityAlgorithms::classifyStability_SchweizerBellaire(const double& Swl_
 }
 
 /**
- * @brief Returns the Profile Stability Classification based on the master thesis of S. Bellaire 
+ * @brief Returns the Profile Stability Classification based on the master thesis of S. Bellaire
  * (September 2005)
  * @param Swl_ssi
  * @param Xdata
@@ -1324,23 +1324,23 @@ double StabilityAlgorithms::CriticalCutLength(const double& H_slab, const double
 	const double sin_sl = sqrt( 1. - mio::Optim::pow2(cos_sl) );
 	const double D = H_slab;
 	const double tau_p = STpar.Sig_c2;
-	const double sigma_n = - stress / 1000.; 
-	const double tau_g = sigma_n * sin_sl / cos_sl; 
+	const double sigma_n = - stress / 1000.;
+	const double tau_g = sigma_n * sin_sl / cos_sl;
 	const double E = ElementData::getYoungModule(rho_slab, ElementData::Exp);
-	
+
 	const double E_prime = E / (1. - 0.2*0.2);	// 0.2 is poisson ratio
 	static const double G_wl = 2e5;
 	const double Dwl = Edata.L;
 	const double lambda = sqrt( (E_prime * D * Dwl) / (G_wl) );
 	const double sqrt_arg = Optim::pow2(tau_g) + 2.*sigma_n*(tau_p - tau_g);
 	if (sqrt_arg<0.) return 0.;
-	
+
 	const double crit_length = lambda * (-tau_g + sqrt(sqrt_arg)) / sigma_n;
-	
+
 	//this will be needed to compute the propagation distance
 	//const double sig_xx = rho_slab * Constants::g * (crit_length / 1.5) * STpar.sin_psi_ref + (3. * rho_slab * Constants::g * (crit_length / 1.5) * (crit_length / 1.5))/D;
 	//const double sig_t = 2.4E5 * pow((rho_slab / Constants::density_ice), 2.44);
 	//Edata.crit_length = (sig_xx > sig_t) ? 6.0 : (crit_length);
-	 
+
 	return (H_slab < Stability::minimum_slab || crit_length > 3.) ? (3.) : (crit_length);
 }

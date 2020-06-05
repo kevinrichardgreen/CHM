@@ -446,51 +446,51 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 
 	FILE *fin = fopen(snofilename.c_str(), "r");
 	if (fin == NULL)
-		throw IOException("Cannot open input profile "+snofilename, AT);
+		throw IOException("Cannot open input profile "+snofilename, MetAT);
 
 	// Header, Station Name and Julian Date
 	char station_name[MAX_STRING_LENGTH];
 	if (fscanf(fin, " %*s") != 0) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read header of file "+snofilename, AT);
+		throw InvalidFormatException("Can not read header of file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "\nStationName= %128s", station_name) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read StationName in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read StationName in file "+snofilename, MetAT);
 	}
 	int YYYY, MM, DD, HH, MI, dum;
 	if (fscanf(fin, "\nProfileDate= %4d %2d %2d %2d %2d", &YYYY, &MM, &DD, &HH, &MI) != 5) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read ProfileDate in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read ProfileDate in file "+snofilename, MetAT);
 	}
 	SSdata.profileDate = Date::rnd(Date(YYYY, MM, DD, HH, MI, time_zone), 1.);
 
 	// Last checked calculated snow depth used for albedo control
 	if (fscanf(fin, "\nHS_Last=%lf", &SSdata.HS_last) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read HS_Last in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read HS_Last in file "+snofilename, MetAT);
 	}
 	double latitude, longitude, altitude;
 	if (fscanf(fin, "\nLatitude=%lf", &latitude) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read Latitude in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read Latitude in file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "\nLongitude=%lf", &longitude) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read Longitude in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read Longitude in file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "\nAltitude=%lf", &altitude) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read Altitude in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read Altitude in file "+snofilename, MetAT);
 	}
 	double slope_angle, azi;
 	if (fscanf(fin, "\nSlopeAngle=%lf", &slope_angle) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read SlopeAngle in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read SlopeAngle in file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "\nSlopeAzi=%lf", &azi) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read SlopeAzi in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read SlopeAzi in file "+snofilename, MetAT);
 	}
 
 	mio::Coords tmppos;
@@ -503,50 +503,50 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
         fclose(fin);
 		prn_msg(__FILE__, __LINE__, "wrn", Date(),
 		        "You want to use measured albedo in a slope steeper than 3 deg  with PERP_TO_SLOPE set!");
-		throw IOException("Do not generate Xdata from file "+snofilename, AT);
+		throw IOException("Do not generate Xdata from file "+snofilename, MetAT);
 	}
 
 	// Check consistency of nXLayerData
 	if (fscanf(fin, "\nnSoilLayerData=%d", &dum) != 1) {
         fclose(fin);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "Missing 'nSoilLayerData'");
-		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 	}
 	if (dum < 0) {
 	    fclose(fin);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "'nSoilLayerData' < 0 !!!");
-		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 	} else if (useSoilLayers && (dum < 1)) {
 	    fclose(fin);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "useSoilLayers set but 'nSoilLayerData' < 1 !!!");
-		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 	} else if (!useSoilLayers && (dum > 0)) {
 	    fclose(fin);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "useSoilLayers not set but 'nSoilLayerData' > 0 !!!");
-		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 	}
 	SSdata.nLayers = static_cast<size_t>(dum); //we checked that it is >0
 	if (fscanf(fin, "\nnSnowLayerData=%d", &dum) != 1) {
 	    fclose(fin);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "Missing 'nSnowLayerData'");
-		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 	}
 	if (dum < 0) {
 	    fclose(fin);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "'nSnowLayerData' < 0  !!!");
-		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 	}
 	SSdata.nLayers += static_cast<size_t>(dum); //we checked that it is >0
 
 	if (fscanf(fin, "\nSoilAlbedo=%lf", &SSdata.SoilAlb) != 1) {
         fclose(fin);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "Missing 'SoilAlbedo'");
-		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "\nBareSoil_z0=%lf", &SSdata.BareSoil_z0) != 1) {
 	    fclose(fin);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "Missing 'BareSoil_z0'");
-		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 	}
 	if (SSdata.BareSoil_z0==0.) {
 		prn_msg(__FILE__, __LINE__, "wrn", Date(), "'BareSoil_z0'=0 from %s, reset to 0.02", snowfile.c_str());
@@ -560,38 +560,38 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 
 	if (fscanf(fin, "\nCanopyHeight=%lf",&SSdata.Canopy_Height) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read CanopyHeight in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read CanopyHeight in file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "\nCanopyLeafAreaIndex=%lf",&SSdata.Canopy_LAI) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read CanopyLeafAreaIndex in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read CanopyLeafAreaIndex in file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "\nCanopyDirectThroughfall=%lf",&SSdata.Canopy_Direct_Throughfall) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read CanopyDirectThroughfall in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read CanopyDirectThroughfall in file "+snofilename, MetAT);
 	}
 
 	if (fscanf(fin, "\nWindScalingFactor=%lf",&SSdata.WindScalingFactor) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read WindScalingFactor in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read WindScalingFactor in file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "\nErosionLevel=%d",&SSdata.ErosionLevel) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read ErosionLevel in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read ErosionLevel in file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "\nTimeCountDeltaHS=%lf",&SSdata.TimeCountDeltaHS) != 1) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read TimeCountDeltaHS in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read TimeCountDeltaHS in file "+snofilename, MetAT);
 	}
 
 	if (fscanf(fin,"\nYYYY") < 0) {
         fclose(fin);
 		prn_msg(__FILE__, __LINE__, "err", Date(), "Failed reading layer header starting with 'YYYY'");
-		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+		throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 	}
 	if (fscanf(fin, "%*[^\n]") != 0) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read header end in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read header end in file "+snofilename, MetAT);
 	}
 
 	int nFields = 0;
@@ -602,7 +602,7 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 		if ((nFields = fscanf(fin, " %d %d %d %d %d", &YYYY, &MM, &DD, &HH, &MI)) != 5) {
             fclose(fin);
 			prn_msg(__FILE__, __LINE__, "err", Date(), "Failed reading date: read %d fields", nFields);
-			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 		SSdata.Ldata[ll].depositionDate = Date::rnd(Date(YYYY, MM, DD, HH, MI, time_zone), 1.);
 		if (SSdata.Ldata[ll].depositionDate > SSdata.profileDate) {
@@ -610,13 +610,13 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 			prn_msg(__FILE__, __LINE__, "err", Date(),
 			        "Layer %u from bottom is younger (%s) than ProfileDate (%s) !!!",
 			        ll+1, SSdata.Ldata[ll].depositionDate.toString(Date::ISO).c_str(), SSdata.profileDate.toString(Date::ISO).c_str());
-			throw IOException("Cannot generate Xdata from file "+snofilename, AT);
+			throw IOException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 		if (SSdata.Ldata[ll].depositionDate < prev_depositionDate) {
 			prn_msg(__FILE__, __LINE__, "err", Date(),
 				   "Layer %d is younger (%s) than layer above (%s) !!!",
 				   ll, prev_depositionDate.toString(Date::ISO).c_str(), SSdata.profileDate.toString(Date::ISO).c_str());
-			throw IOException("Cannot generate Xdata from file "+snofilename, AT);
+			throw IOException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 		prev_depositionDate = SSdata.Ldata[ll].depositionDate;
 
@@ -625,7 +625,7 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 		                      &SSdata.Ldata[ll].phiWater, &SSdata.Ldata[ll].phiVoids, &SSdata.Ldata[ll].phiSoil)) != 6) {
             fclose(fin);
 			prn_msg(__FILE__, __LINE__, "err", Date(), "Failed reading hl etc: read %d of 6 fields", nFields);
-			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 		if (SSdata.Ldata[ll].tl < 100.) {
 			SSdata.Ldata[ll].tl = IOUtils::C_TO_K(SSdata.Ldata[ll].tl);
@@ -634,7 +634,7 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 		                      &SSdata.Ldata[ll].SoilC)) != 3) {
             fclose(fin);
 			prn_msg(__FILE__, __LINE__, "err", Date(), "Failed reading SoilRho etc: read %d of 3 fields", nFields);
-			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 		unsigned int ne_tmp;
 		if ((nFields = fscanf(fin, "%lf %lf %lf %lf %hu %lf %u", &SSdata.Ldata[ll].rg, &SSdata.Ldata[ll].rb,
@@ -642,7 +642,7 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 		                                 &SSdata.Ldata[ll].hr, &ne_tmp)) != 7) {
 			fclose(fin);
 			prn_msg(__FILE__, __LINE__, "err", Date(), "Failed reading rg etc: read %d of 7 fields", nFields);
-			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 		SSdata.Ldata[ll].ne = static_cast<size_t>(ne_tmp);
 		if (SSdata.Ldata[ll].phiSoil==0. && (SSdata.Ldata[ll].rg<=0. || SSdata.Ldata[ll].rb<=0.)) { //Test only for snow layers
@@ -651,7 +651,7 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 			ss << "Invalid grain specification in layer " << ll+1 << " (from bottom) of file " << snofilename << ": ";
 			ss << "grain radius = " << SSdata.Ldata[ll].rg << " bond radius = " << SSdata.Ldata[ll].rb;
 			ss << " (they should be > 0).";
-			throw InvalidArgumentException(ss.str(), AT);
+			throw InvalidArgumentException(ss.str(), MetAT);
 		}
 		if (SSdata.Ldata[ll].rg>0. && SSdata.Ldata[ll].rb >= SSdata.Ldata[ll].rg) {
 			//HACK To avoid surprises in lwsn_ConcaveNeckRadius()
@@ -662,7 +662,7 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 		if ((nFields = fscanf(fin, "%lf %lf", &SSdata.Ldata[ll].CDot, &SSdata.Ldata[ll].metamo)) != 2) {
 		    fclose(fin);
 			prn_msg(__FILE__, __LINE__, "err", Date(), "Failed reading CDot etc: read %d of 2 fields", nFields);
-			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 		for (size_t ii = 0; ii < SnowStation::number_of_solutes; ii++) {
 			if ((nFields = fscanf(fin," %lf %lf %lf %lf ",
@@ -671,7 +671,7 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
                 fclose(fin);
 				prn_msg(__FILE__, __LINE__, "err", Date(),
 				        "Failed reading impurity concentrations: read %d of 4 fields", nFields);
-				throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+				throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 			}
 		}
 	}
@@ -679,46 +679,46 @@ void AsciiIO::readSnowCover(const std::string& i_snowfile, const std::string& st
 	// Read the hoar, drift, and snowfall hazard data info (Zdata, needed for flat field only)
 	if (fscanf(fin,"%*s ") != 0) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read spacing in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read spacing in file "+snofilename, MetAT);
 	}
 	for (size_t ii = 0; ii < 48; ii++) {
 		if (fscanf(fin," %lf ", &Zdata.hoar24[ii]) != 1) {
             fclose(fin);
 			prn_msg(__FILE__, __LINE__, "err", Date(), "While reading hoar data (48) !!!");
-			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 	}
 	if (fscanf(fin,"%*s ") != 0) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read spacing in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read spacing in file "+snofilename, MetAT);
 	}
 	for (size_t ii = 0; ii < 48; ii++) {
 		if (fscanf(fin," %lf ", &Zdata.drift24[ii]) != 1) {
             fclose(fin);
 			prn_msg(__FILE__, __LINE__, "err", Date(), "While reading drift data (48)  !!!");
-			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 	}
 	if (fscanf(fin,"%*s ") != 0) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read spacing in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read spacing in file "+snofilename, MetAT);
 	}
 	for (size_t ii = 0; ii < 144; ii++) {
 		if (fscanf(fin," %lf ", &Zdata.hn3[ii]) != 1) {
             fclose(fin);
 			prn_msg(__FILE__, __LINE__, "err", Date(), "While reading hn(3h) data (144) !!!");
-			throw InvalidFormatException("While reading Zdata (hns3) !!!", AT);
+			throw InvalidFormatException("While reading Zdata (hns3) !!!", MetAT);
 		}
 	}
 	if (fscanf(fin,"%*s ") != 0) {
 		fclose(fin);
-		throw InvalidFormatException("Can not read spacing in file "+snofilename, AT);
+		throw InvalidFormatException("Can not read spacing in file "+snofilename, MetAT);
 	}
 	for (size_t ii = 0; ii < 144; ii++) {
 		if (fscanf(fin," %lf ", &Zdata.hn24[ii]) != 1) {
             fclose(fin);
 			prn_msg(__FILE__, __LINE__, "err", Date(), "While reading hn(24h) data (144)  !!!");
-			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, AT);
+			throw InvalidFormatException("Cannot generate Xdata from file "+snofilename, MetAT);
 		}
 	}
 
@@ -756,7 +756,7 @@ void AsciiIO::writeSnowCover(const mio::Date& date, const SnowStation& Xdata,
 	fout.open(snofilename.c_str(), std::ios::out);
 	if (fout.fail()) {
 		prn_msg(__FILE__, __LINE__, "err", date,"Cannot open profile OUTPUT file: %s", snofilename.c_str());
-		throw AccessException("Cannot dump final Xdata to file "+snofilename, AT);
+		throw AccessException("Cannot dump final Xdata to file "+snofilename, MetAT);
 	}
 
 	// Header, Station Name and Julian Day
@@ -878,7 +878,7 @@ void AsciiIO::writeProfile(const mio::Date& i_date, const SnowStation& Xdata)
 		} else if (vecProfileFmt[ii] == "IMIS") {
 			;
 		} else {
-			throw InvalidArgumentException("Key PROF_FORMAT in section [Output] takes only PRO, PRF or IMIS formats", AT);
+			throw InvalidArgumentException("Key PROF_FORMAT in section [Output] takes only PRO, PRF or IMIS formats", MetAT);
 		}
 	}
 }
@@ -902,14 +902,14 @@ void AsciiIO::writeProfilePro(const mio::Date& i_date, const SnowStation& Xdata,
 
 	if (!checkHeader(Xdata, filename, "pro", "[STATION_PARAMETERS]")) {
 		prn_msg(__FILE__, __LINE__, "err", i_date,"Checking header in file %s", filename.c_str());
-		throw IOException("Cannot dump profiles in " + filename, AT);
+		throw IOException("Cannot dump profiles in " + filename, MetAT);
 	}
 
 	std::ofstream fout(filename.c_str(),  std::ios::out | std::ofstream::app);
 	if (fout.fail()) {
 		prn_msg(__FILE__, __LINE__, "err", i_date,
 			   "Cannot open profile series file: %s", filename.c_str());
-		throw IOException("Cannot dump profiles in " + filename + "for visualisation", AT);
+		throw IOException("Cannot dump profiles in " + filename + "for visualisation", MetAT);
 	}
 
 	fout << "\n0500," << i_date.toString(Date::DIN);
@@ -1273,7 +1273,7 @@ void AsciiIO::writeProfilePrf(const mio::Date& dateOfProfile, const SnowStation&
 	if (Xdata.getNumberOfElements() == Xdata.SoilNode) { //only, so nothing to write
 		return;
 	}
-	
+
 	//open profile filestream
 	const std::string ext = (aggregate)? ".aprf" : ".prf";
 	const std::string filename( getFilenamePrefix(Xdata.meta.getStationID(), outpath) + ext );
@@ -1288,17 +1288,17 @@ void AsciiIO::writeProfilePrf(const mio::Date& dateOfProfile, const SnowStation&
 
 	if (!checkHeader(Xdata, filename, "prf", "[TABULAR_PROFILES]")) {
 		prn_msg(__FILE__, __LINE__, "err", dateOfProfile,"Checking header in file %s", filename.c_str());
-		throw IOException("Cannot dump tabular profiles in " + filename, AT);
+		throw IOException("Cannot dump tabular profiles in " + filename, MetAT);
 	}
 
 	std::ofstream ofs(filename.c_str(), std::ios::out | std::fstream::app);
-	if (!ofs) throw AccessException("[E] Can not open file " + filename, AT);
+	if (!ofs) throw AccessException("[E] Can not open file " + filename, MetAT);
 
 	ofs << "#Date,JulianDate,station,aspect,slope,Nlayers,hs,swe,lwc_sum,ts,tg\n";
 	ofs << "#-,-,-,deg,deg,1,cm,kg m-2,degC,degC\n";
 	ofs << fixed << dateOfProfile.toString(Date::ISO) << "," << setprecision(6) << dateOfProfile.getJulian() << ",";
 	ofs << Xdata.meta.getStationName() << "," << setprecision(1) << Xdata.meta.getAzimuth() << "," << Xdata.meta.getSlopeAngle() << ",";
-	
+
 	vector<SnowProfileLayer> Pdata( SnowProfileLayer::generateProfile(dateOfProfile, Xdata, hoar_density_surf, hoar_min_size_surf) );
 	if (aggregate) {
 		Aggregate::aggregate(Pdata);
@@ -1307,7 +1307,7 @@ void AsciiIO::writeProfilePrf(const mio::Date& dateOfProfile, const SnowStation&
 	const size_t nL = Pdata.size();
 	ofs << nL << "," << setprecision(1) << Pdata[nL-1].height << "," << Xdata.swe << "," << Xdata.lwc_sum << ",";
 	ofs << Pdata[nL-1].T << "," << IOUtils::K_TO_C(Xdata.Ndata[Xdata.SoilNode].T) << "\n";
-	
+
 	//Minima of stability indices at their respective depths as well as stability classifications
 	ofs << "#Stab,stab_height,stab_index,stab_class1,stab_class2\n";
 	ofs << "# ,cm,1,1,1\n";
@@ -1317,7 +1317,7 @@ void AsciiIO::writeProfilePrf(const mio::Date& dateOfProfile, const SnowStation&
 	ofs << "ssi," << setprecision(1) << M_TO_CM(Xdata.z_S_s/cos_sl) << "," << setprecision(2) << Xdata.S_s << "\n";
 	ofs << "S4," << setprecision(1) << M_TO_CM(Xdata.z_S_4/cos_sl) << "," << setprecision(2) << Xdata.S_4 << "\n";
 	ofs << "S5," << setprecision(1) << M_TO_CM(Xdata.z_S_5/cos_sl) << "," << setprecision(2) << Xdata.S_5 << "\n";
-	
+
 	//Now write all layers starting from the ground
 	if (aggregate)
 		ofs << "#Aggregated profile\n";
@@ -1334,7 +1334,7 @@ void AsciiIO::writeProfilePrf(const mio::Date& dateOfProfile, const SnowStation&
 		ofs << Pdata[ll].type << "," << Pdata[ll].marker << "," << setprecision(1) << Pdata[ll].hard << "\n";
 	}
 	ofs << "\n\n";
-	
+
 	ofs.close();
 }
 
@@ -1675,8 +1675,8 @@ bool AsciiIO::appendFile(const std::string& filename, const mio::Date& startdate
 	fin.open (filename.c_str());
 	fout.open(filename_tmp.c_str());
 
-	if (fin.fail()) throw AccessException(filename, AT);
-	if (fout.fail()) throw AccessException(filename_tmp, AT);
+	if (fin.fail()) throw AccessException(filename, MetAT);
+	if (fout.fail()) throw AccessException(filename_tmp, MetAT);
 
 	const char eoln = FileUtils::getEoln(fin); //get the end of line character for the file
 
@@ -1760,14 +1760,14 @@ void AsciiIO::writeTimeSeries(const SnowStation& Xdata, const SurfaceFluxes& Sda
 	// Check file for header
 	if (!checkHeader(Xdata, filename, "met", "[STATION_PARAMETERS]")) {
 		prn_msg(__FILE__, __LINE__, "err", Mdata.date, "Checking header in file %s", filename.c_str());
-		throw InvalidFormatException("Writing Time Series data failed", AT);
+		throw InvalidFormatException("Writing Time Series data failed", MetAT);
 	}
 
 	std::ofstream fout;
 	fout.open(filename.c_str(),  std::ios::out | std::ofstream::app);
 	if (fout.fail()) {
 		prn_msg(__FILE__, __LINE__, "err", Mdata.date, "Cannot open time series file: %s", filename.c_str());
-		throw AccessException(filename, AT);
+		throw AccessException(filename, MetAT);
 	}
 	// Print time stamp
 	fout << "\n0203," << Mdata.date.toString(Date::DIN);
@@ -1846,7 +1846,7 @@ void AsciiIO::writeTimeSeries(const SnowStation& Xdata, const SurfaceFluxes& Sda
 			std::ostringstream ss;
 			ss << "Configured " << nrFixedPositions << " fixed positions but found " << Mdata.zv_ts.size() << " snow temperatures depths and ";
 			ss << Mdata.ts.size() << " snow temperatures";
-			throw IndexOutOfBoundsException(ss.str(), AT);
+			throw IndexOutOfBoundsException(ss.str(), MetAT);
 		}
 
 		size_t jj = 0;
@@ -1897,7 +1897,7 @@ void AsciiIO::writeTimeSeries(const SnowStation& Xdata, const SurfaceFluxes& Sda
 			if ((jj += writeTemperatures(fout, Mdata.zv_ts.at(ii), Mdata.ts.at(ii), ii, Xdata)) > 44) {
 				prn_msg(__FILE__, __LINE__, "err", Mdata.date,
 				        "There is not enough space to accomodate your temperature sensors: j=%u > 44!", jj);
-				throw IOException("Writing Time Series data failed", AT);
+				throw IOException("Writing Time Series data failed", MetAT);
 			}
 		}
 		if (Xdata.tag_low) {
@@ -2364,7 +2364,7 @@ bool AsciiIO::checkHeader(const SnowStation& Xdata, const std::string& filename,
 		string dummy;
 		if (!(fin >> dummy) || dummy.empty()) {
 			fin.close();
-			throw InvalidFormatException("Can not read header of file \'"+filename+"\'", AT);
+			throw InvalidFormatException("Can not read header of file \'"+filename+"\'", MetAT);
 		}
 		if (signature!=dummy) {
 			prn_msg(__FILE__, __LINE__, "err", Date(), "Header in %s should read %s, not %s", filename.c_str(), signature.c_str(), dummy.c_str());
@@ -2400,7 +2400,7 @@ bool AsciiIO::checkHeader(const SnowStation& Xdata, const std::string& filename,
 bool AsciiIO::writeHazardData(const std::string& /*stationID*/, const std::vector<ProcessDat>& /*Hdata*/,
                               const std::vector<ProcessInd>& /*Hdata_ind*/, const size_t& /*num*/)
 {
-	throw IOException("Nothing implemented here!", AT);
+	throw IOException("Nothing implemented here!", MetAT);
 }
 
 /**

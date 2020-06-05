@@ -86,7 +86,7 @@ Hazard::Hazard(const SnowpackConfig& cfg, const double duration)
 	* It is a matter of consitency. If you change this, a big mess will result!!!
 	*/
 	cfg.getValue("HAZARD_STEPS_BETWEEN", "Output", hazard_steps_between);
-	if (duration<=0.) throw InvalidArgumentException("Hazard duration must be >0", AT);
+	if (duration<=0.) throw InvalidArgumentException("Hazard duration must be >0", MetAT);
 	nHz = static_cast<unsigned int>( floor( (duration / (static_cast<double>(hazard_steps_between) * sn_dt)) ) + 2 );
 	if (nHz == 0) nHz = 1;
 }

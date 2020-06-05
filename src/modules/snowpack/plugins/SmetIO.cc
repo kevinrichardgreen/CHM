@@ -89,18 +89,18 @@ using namespace mio;
  * source           = WSL-SLF			;optional key
  * ProfileDate      = 2009-10-01T00:00		;when was the profile made, see explanations above
  * HS_Last          = 0.0000			;last measured snow height
- * SlopeAngle       = 38.0			
- * SlopeAzi         = 0.0			
+ * SlopeAngle       = 38.0
+ * SlopeAzi         = 0.0
  * nSoilLayerData   = 0				;number of soil layers
  * nSnowLayerData   = 1				;number of snow layers
  * SoilAlbedo       = 0.20				;albedo of the exposed soil
  * BareSoil_z0      = 0.020			;roughtness length of the exposed soil
  * CanopyHeight     = 0.00				;height (in m) of the canopy
- * CanopyLeafAreaIndex     = 0.00		
- * CanopyDirectThroughfall = 1.00		
+ * CanopyLeafAreaIndex     = 0.00
+ * CanopyDirectThroughfall = 1.00
  * WindScalingFactor       = 1.00			;some stations consistently measure a wind that is too low
- * ErosionLevel     = 0				
- * TimeCountDeltaHS = 0.000000			
+ * ErosionLevel     = 0
+ * TimeCountDeltaHS = 0.000000
  * fields           = timestamp Layer_Thick  T  Vol_Frac_I  Vol_Frac_W  Vol_Frac_V  Vol_Frac_S Rho_S Conduc_S HeatCapac_S  rg  rb  dd  sp  mk mass_hoar ne CDot metamo
  * [DATA]
  * 2009-09-19T02:30 0.003399 273.15 0.579671 0.068490 0.351839 0.000000 0.0 0.0 0.0 1.432384 1.028390 0.000000 1.000000 22 0.000000 1 0.000000 0.000000
@@ -268,7 +268,7 @@ void SmetIO::readSnowCover(const std::string& i_snowfile, const std::string& sta
 	if (FileUtils::fileExists(hazfilename)) {
 		const Date haz_date( read_hazsmet(hazfilename, Zdata) );
 		if (haz_date != sno_date)
-			throw IOException("Inconsistent ProfileDate in files: " + snofilename + " and " + hazfilename, AT);
+			throw IOException("Inconsistent ProfileDate in files: " + snofilename + " and " + hazfilename, MetAT);
 	} else {
 		//prn_msg(__FILE__, __LINE__, "wrn", Date(), "Hazard file %s does not exist. Initialize Zdata to zero.", hazfilename.c_str());
 		Zdata.reset();
@@ -288,14 +288,14 @@ mio::Date SmetIO::read_hazsmet(const std::string& hazfilename, ZwischenData& Zda
 	Date profile_date;
 	IOUtils::convertString(profile_date, haz_reader.get_header_value("ProfileDate"),  SmetIO::in_dflt_TZ);
 	if (profile_date.isUndef())
-		throw InvalidFormatException("Invalid ProfileDate in file \""+hazfilename+"\"", AT);
+		throw InvalidFormatException("Invalid ProfileDate in file \""+hazfilename+"\"", MetAT);
 
 	std::vector<string> vec_timestamp;
 	std::vector<double> vec_data;
 	haz_reader.read(vec_timestamp, vec_data);
 
 	if (vec_timestamp.size() != nr_datalines)
-		throw InvalidFormatException("There need to be 144 data lines in " + haz_reader.get_filename(), AT);
+		throw InvalidFormatException("There need to be 144 data lines in " + haz_reader.get_filename(), MetAT);
 
 	size_t current_index = 0;
 	for (size_t ii=0; ii<nr_datalines; ii++) {
@@ -320,7 +320,7 @@ mio::Date SmetIO::read_snosmet(const std::string& snofilename, const std::string
 	smet::SMETReader sno_reader(snofilename);
 	Date profile_date( read_snosmet_header(sno_reader, stationID, SSdata) );
 	if (profile_date.isUndef())
-		throw InvalidFormatException("Invalid ProfileDate in file \""+snofilename+"\"", AT);
+		throw InvalidFormatException("Invalid ProfileDate in file \""+snofilename+"\"", MetAT);
 	profile_date.rnd(1.);
 
 	//Read actual data
@@ -331,13 +331,13 @@ mio::Date SmetIO::read_snosmet(const std::string& snofilename, const std::string
 	if (SSdata.nLayers > 0)
 		SSdata.Ldata.resize(SSdata.nLayers, LayerData());
 	if (vec_timestamp.size() != SSdata.nLayers)
-		throw InvalidFormatException("Xdata: Layers expected != layers read in " + sno_reader.get_filename(), AT);
+		throw InvalidFormatException("Xdata: Layers expected != layers read in " + sno_reader.get_filename(), MetAT);
 
 	const size_t nr_of_fields = sno_reader.get_nr_of_fields();
 	const size_t nr_of_solutes = (nr_of_fields - 18) / 4;
 
 	if (SnowStation::number_of_solutes != nr_of_solutes)
-		throw InvalidFormatException("Mismatch in number_of_solutes and fields in " + sno_reader.get_filename(), AT);
+		throw InvalidFormatException("Mismatch in number_of_solutes and fields in " + sno_reader.get_filename(), MetAT);
 
 	//copy data to respective variables in SSdata
 	size_t current_index = 0;
@@ -351,13 +351,13 @@ mio::Date SmetIO::read_snosmet(const std::string& snofilename, const std::string
 			prn_msg(__FILE__, __LINE__, "err", Date(),
 				   "Layer %d from bottom is younger (%s) than ProfileDate (%s) !!!",
 				   ll+1, SSdata.Ldata[ll].depositionDate.toString(Date::ISO).c_str(), SSdata.profileDate.toString(Date::ISO).c_str());
-			throw IOException("Cannot generate Xdata from file " + sno_reader.get_filename(), AT);
+			throw IOException("Cannot generate Xdata from file " + sno_reader.get_filename(), MetAT);
 		}
 		if (SSdata.Ldata[ll].depositionDate < prev_depositionDate) {
 			prn_msg(__FILE__, __LINE__, "err", Date(),
 				   "Layer %d is younger (%s) than layer above (%s) !!!",
 				   ll, prev_depositionDate.toString(Date::ISO).c_str(), SSdata.profileDate.toString(Date::ISO).c_str());
-			throw IOException("Cannot generate Xdata from file " + sno_reader.get_filename(), AT);
+			throw IOException("Cannot generate Xdata from file " + sno_reader.get_filename(), MetAT);
 		}
 		prev_depositionDate = SSdata.Ldata[ll].depositionDate;
 
@@ -445,26 +445,26 @@ mio::Date SmetIO::read_snosmet_header(const smet::SMETReader& sno_reader, const 
 	if ((sw_mode == "BOTH") && perp_to_slope && (SSdata.meta.getSlopeAngle() > Constants::min_slope_angle)) {
 		prn_msg(__FILE__, __LINE__, "wrn", Date(),
 		        "You want to use measured albedo in a slope steeper than 3 deg  with PERP_TO_SLOPE set!");
-		throw IOException("Do not generate Xdata from file " + sno_reader.get_filename(), AT);
+		throw IOException("Do not generate Xdata from file " + sno_reader.get_filename(), MetAT);
 	}
 
 	const int nSoilLayerData = get_intval(sno_reader, "nSoilLayerData");
 	if (nSoilLayerData < 0) {
 		prn_msg(__FILE__, __LINE__, "err", Date(), "'nSoilLayerData' < 0 !!!");
-		throw InvalidFormatException("Cannot generate Xdata from file " + sno_reader.get_filename(), AT);
+		throw InvalidFormatException("Cannot generate Xdata from file " + sno_reader.get_filename(), MetAT);
 	} else if (useSoilLayers && (nSoilLayerData < 1)) {
 		prn_msg(__FILE__, __LINE__, "err", Date(), "useSoilLayers set but 'nSoilLayerData' < 1 !!!");
-		throw InvalidFormatException("Cannot generate Xdata from file " + sno_reader.get_filename(), AT);
+		throw InvalidFormatException("Cannot generate Xdata from file " + sno_reader.get_filename(), MetAT);
 	} else if (!useSoilLayers && (nSoilLayerData > 0)) {
 		prn_msg(__FILE__, __LINE__, "err", Date(), "useSoilLayers not set but 'nSoilLayerData' > 0 !!!");
-		throw InvalidFormatException("Cannot generate Xdata from file " + sno_reader.get_filename(), AT);
+		throw InvalidFormatException("Cannot generate Xdata from file " + sno_reader.get_filename(), MetAT);
 	}
 	SSdata.nLayers = (unsigned int) nSoilLayerData;
 
 	const int nSnowLayerData = get_intval(sno_reader, "nSnowLayerData");
 	if (nSnowLayerData < 0) {
 		prn_msg(__FILE__, __LINE__, "err", Date(), "'nSnowLayerData' < 0  !!!");
-		throw InvalidFormatException("Cannot generate Xdata from file " + sno_reader.get_filename(), AT);
+		throw InvalidFormatException("Cannot generate Xdata from file " + sno_reader.get_filename(), MetAT);
 	}
 	SSdata.nLayers += (unsigned int)nSnowLayerData;
 
@@ -510,7 +510,7 @@ double SmetIO::get_doubleval(const smet::SMETReader& reader, const std::string& 
 	if (value == nodata){
 		const std::string msg( "Missing key '" + key + "'" );
 		prn_msg(__FILE__, __LINE__, "err", Date(), msg.c_str());
-		throw InvalidFormatException("Cannot generate Xdata from file " + reader.get_filename(), AT);
+		throw InvalidFormatException("Cannot generate Xdata from file " + reader.get_filename(), MetAT);
 	}
 
 	return value;
@@ -527,7 +527,7 @@ int SmetIO::get_intval(const smet::SMETReader& reader, const std::string& key) c
 	if (value == inodata){
 		const std::string msg( "Missing key '" + key + "'" );
 		prn_msg(__FILE__, __LINE__, "err", Date(), msg.c_str());
-		throw InvalidFormatException("Cannot generate Xdata from file " + reader.get_filename(), AT);
+		throw InvalidFormatException("Cannot generate Xdata from file " + reader.get_filename(), MetAT);
 	}
 
 	return value;
@@ -1086,7 +1086,7 @@ void SmetIO::writeTimeSeries(const SnowStation& Xdata, const SurfaceFluxes& Sdat
 			Mdata.getFixedPositions(fixedPositions);
 
 		if (!FileUtils::validFileAndPath(filename)) //Check whether filename is valid
-				throw InvalidNameException(filename, AT);
+				throw InvalidNameException(filename, MetAT);
 
 		if (FileUtils::fileExists(filename)) {
 			tsWriters[filename] = new smet::SMETWriter(filename, getFieldsHeader(), IOUtils::nodata); //set to append mode
@@ -1101,13 +1101,13 @@ void SmetIO::writeTimeSeries(const SnowStation& Xdata, const SurfaceFluxes& Sdat
 
 void SmetIO::writeProfile(const mio::Date& /*date*/, const SnowStation& /*Xdata*/)
 {
-	throw IOException("Nothing implemented here!", AT);
+	throw IOException("Nothing implemented here!", MetAT);
 }
 
 bool SmetIO::writeHazardData(const std::string& /*stationID*/, const std::vector<ProcessDat>& /*Hdata*/,
                              const std::vector<ProcessInd>& /*Hdata_ind*/, const size_t& /*num*/)
 {
-	throw IOException("Nothing implemented here!", AT);
+	throw IOException("Nothing implemented here!", MetAT);
 }
 
 // complete filename_prefix

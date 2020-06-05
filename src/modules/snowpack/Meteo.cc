@@ -43,7 +43,7 @@ Meteo::Meteo(const SnowpackConfig& cfg)
 {
 	const std::string stability_model = cfg.get("ATMOSPHERIC_STABILITY", "Snowpack");
 	stability = getStability(stability_model);
-	
+
 	//Initial estimate of the roughness length for the site; will be adjusted iteratively, default value and operational mode: 0.002 m
 	cfg.getValue("ROUGHNESS_LENGTH", "Snowpack", roughness_length);
 
@@ -83,11 +83,11 @@ Meteo::ATM_STABILITY Meteo::getStability(const std::string& stability_model)
 	else if (stability_model=="MO_SCHLOEGL_MULTI_OFFSET")
 		return MO_SCHLOEGL_MULTI_OFFSET;
 	else if (stability_model=="MONIN_OBUKHOV") //HACK: temporary
-		throw InvalidArgumentException("Atmospheric stability model \""+stability_model+"\" is now called 'MO_MICHLMAYR'", AT);
+		throw InvalidArgumentException("Atmospheric stability model \""+stability_model+"\" is now called 'MO_MICHLMAYR'", MetAT);
 	else if (stability_model=="NEUTRAL_MO") //HACK: temporary
-		throw InvalidArgumentException("Atmospheric stability model \""+stability_model+"\" is now called 'NEUTRAL'", AT);
+		throw InvalidArgumentException("Atmospheric stability model \""+stability_model+"\" is now called 'NEUTRAL'", MetAT);
 	else
-		throw InvalidArgumentException("Atmospheric stability model \""+stability_model+"\" is not supported!", AT);
+		throw InvalidArgumentException("Atmospheric stability model \""+stability_model+"\" is not supported!", MetAT);
 }
 
 /**
@@ -149,11 +149,11 @@ void Meteo::MOStability(const ATM_STABILITY& use_stability, const double& ta_v, 
 		psi_m = psi_s = 0.;
 		return;
 	}
-	
+
 	ustar = Constants::karman * vw / (z_ratio - psi_m);
 	const double Tstar = Constants::karman * (t_surf_v - ta_v) / (z_ratio - psi_s);
 	const double stab_ratio = -Constants::karman * zref * Tstar * Constants::g / (t_surf * Optim::pow2(ustar));
-	
+
 	if (stab_ratio > 0.) { // stable
 		switch(use_stability) {
 			case MO_HOLTSLAG: {
@@ -162,7 +162,7 @@ void Meteo::MOStability(const ATM_STABILITY& use_stability, const double& ta_v, 
 			                           * exp(-0.35 * stab_ratio) + 10.71);
 			return;
 			}
-		
+
 			case MO_STEARNS: {
 			// Stearns & Weidner, 1993
 			const double dummy1 = pow((1. + 5. * stab_ratio), 0.25);
@@ -173,7 +173,7 @@ void Meteo::MOStability(const ATM_STABILITY& use_stability, const double& ta_v, 
 					- 2. * dummy2 - 0.66667 * Optim::pow3(dummy2) + 1.2804;
 			return;
 			}
-		
+
 			case MO_MICHLMAYR: { //default, old MO
 			// Stearns & Weidner, 1993 modified by Michlmayr, 2008
 			const double dummy1 = pow((1. + 5. * stab_ratio), 0.25);
@@ -184,36 +184,36 @@ void Meteo::MOStability(const ATM_STABILITY& use_stability, const double& ta_v, 
 					- 1. * dummy2 - 0.3 * Optim::pow3(dummy2) + 1.2804;
 			return;
 			}
-		
+
 			case MO_LOG_LINEAR: {
 			//log_linear
 			psi_m = psi_s = -5.* stab_ratio;
 			return;
 			}
-		
+
 			case MO_SCHLOEGL_UNI: {
 			//schloegl univariate: bin univariate 2/3 datasets
 			psi_m = -1.62 * stab_ratio;
 			psi_s = -2.96 * stab_ratio;
 			return;
 			}
-			
+
 			case MO_SCHLOEGL_MULTI: {
 			//All multivariate 2/3 without offset
 			psi_m = - 65.35 *(ta_v - t_surf_v)/(0.5 * (ta_v + t_surf_v)) + 0.0017 * zref * Constants::g/pow(vw,2);
 			psi_s = - 813.21 *(ta_v - t_surf_v)/(0.5 *(ta_v + t_surf_v)) - 0.0014 * zref * Constants::g/pow(vw,2);
 			return;
 			}
-			
+
 			case MO_SCHLOEGL_MULTI_OFFSET: {
 			//All multivariate 2/3 with offset
 			psi_m = -0.69 - 15.47 * (ta_v - t_surf_v)/(0.5 * (ta_v + t_surf_v)) + 0.0059 * zref * Constants::g/pow(vw,2);
 			psi_s = 6.73 -688.18 * (ta_v - t_surf_v)/(0.5 * (ta_v + t_surf_v)) - 0.0023 * zref * Constants::g/pow(vw,2);
 			return;
 			}
-		
+
 			default:
-			throw InvalidArgumentException("Unsupported atmospheric stability parametrization", AT);
+			throw InvalidArgumentException("Unsupported atmospheric stability parametrization", MetAT);
 		}
 	} else { //unstable
 		// Paulson - the original
@@ -263,7 +263,7 @@ void Meteo::MicroMet(const SnowStation& Xdata, CurrentMeteo &Mdata, const bool& 
 	do {
 		iter++;
 		ustar_old = ustar;
-		
+
 		// Stability corrections: compute ustar, psi_s & potentially psi_m
 		if (stability==RICHARDSON) {
 			RichardsonStability(ta_v, t_surf_v, zref, vw, z_ratio, ustar, psi_s); //compute ustar & psi_s

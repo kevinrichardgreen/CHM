@@ -388,7 +388,7 @@ double Canopy::get_f2f4(const size_t& SoilNode, ElementData* EMS)
 		}
 		zupper += EMS[e].L;
 	}// End of loop and now do the bottom layer
-	
+
 	if ( RootLayer > 0 ){
 		RootLayer -= 1;
 	}
@@ -1489,7 +1489,7 @@ void Canopy::CanopyRadiationOutput(SnowStation& Xdata, const CurrentMeteo& Mdata
 
 	// Scaling of results with CanopyClosureDiffuse and CanopyClosureDirect
 	const double  CanopyClosureDiffuse = 1. - Xdata.Cdata.direct_throughfall;
-	
+
 	 if (Twolayercanopy) {
 		 double CanClosDirLeaves = (canopytransmission)? CanopyShadeSoilCover(Xdata.Cdata.height, CanopyClosureDiffuse, Mdata.elev) : CanopyClosureDiffuse;
 		 double CanClosDirTrunks = 0;
@@ -1497,39 +1497,39 @@ void Canopy::CanopyRadiationOutput(SnowStation& Xdata, const CurrentMeteo& Mdata
 			CanClosDirLeaves = CanopyShadeSoilCover(Xdata.Cdata.height*(1. - trunk_frac_height), CanopyClosureDiffuse, Mdata.elev);
 			CanClosDirTrunks = CanopyShadeSoilCover(Xdata.Cdata.height, CanopyClosureDiffuse, Mdata.elev)- CanClosDirLeaves;
 		}*/
-		 
+
 		 // Shortwave fluxes (diffuse)
 		rswrac = (rswrac_loc * CanopyClosureDiffuse + iswrac * ag * (1.0 - CanopyClosureDiffuse)) * (1.0 - RadFracDirect);
 		iswrbc = (iswrbc_loc * CanopyClosureDiffuse + iswrac * (1.0 - CanopyClosureDiffuse)) * (1.0 - RadFracDirect);
 		rswrbc = (rswrbc_loc * CanopyClosureDiffuse + iswrac * ag * (1.0 - CanopyClosureDiffuse)) * (1.0 - RadFracDirect);
-		
+
 		// Shortwave fluxes (direct)
 		rswrac += (rswrac_loc2 * CanClosDirLeaves + rswrac_loc3 * CanClosDirTrunks + iswrac * ag * (1.0 - CanClosDirTrunks - CanClosDirLeaves)) * RadFracDirect;
 		iswrbc += (iswrbc_loc2 * CanClosDirLeaves + iswrbc_loc3 * CanClosDirTrunks + iswrac * (1.0 - CanClosDirTrunks - CanClosDirLeaves)) * RadFracDirect;
 		rswrbc += (rswrbc_loc2 * CanClosDirLeaves + rswrbc_loc3 * CanClosDirTrunks + iswrac * ag * (1.0 - CanClosDirTrunks - CanClosDirLeaves)) *RadFracDirect;
-		
+
 		// Longwave fluxes (treat as diffuse)
 		rlwrac = rlwrac * CanopyClosureDiffuse + Constants::stefan_boltzmann * eg * Tsfc4 * (1.0-CanopyClosureDiffuse);
 		ilwrbc = ilwrbc * CanopyClosureDiffuse + ilwrac * (1.0 - CanopyClosureDiffuse);
 		rlwrbc = rlwrbc * CanopyClosureDiffuse + Constants::stefan_boltzmann * eg * Tsfc4 * (1.0-CanopyClosureDiffuse);
-		
+
 		// radiations to trunks
 		Xdata.Cdata.SWnet_Trunks = (1.0 - RadFracDirect) * iswrac * (1. -sigf) * (1.-trunkalb)*(1-attfactor_SW) * CanopyClosureDiffuse
 				+ CanClosDirLeaves * RadFracDirect *iswrac * (1. -sigf) * (1.-trunkalb)*(1. - attfactor_SWdir)
                                 + CanClosDirTrunks *  RadFracDirect *iswrac * (1.-trunkalb)*(1. - attfactor_SWdir) ;
 		Xdata.Cdata.LWnet_Trunks = RAT  * CanopyClosureDiffuse ;
-		 
+
 	 } else {
 		 // Shortwave fluxes (diffuse)
 		rswrac = (rswrac_loc * CanopyClosureDiffuse + iswrac * ag * (1.0 - CanopyClosureDiffuse)) * (1.0 - RadFracDirect);
 		iswrbc = (iswrbc_loc * CanopyClosureDiffuse + iswrac * (1.0 - CanopyClosureDiffuse)) * (1.0 - RadFracDirect);
 		rswrbc = (rswrbc_loc * CanopyClosureDiffuse + iswrac * ag * (1.0 - CanopyClosureDiffuse)) * (1.0 - RadFracDirect);
-		
+
 		// Shortwave fluxes (direct)
 		rswrac += (rswrac_loc2 * CanopyClosureDirect + iswrac * ag * (1.0 - CanopyClosureDirect)) * RadFracDirect;
 		iswrbc += (iswrbc_loc2 * CanopyClosureDirect + iswrac * (1.0 - CanopyClosureDirect)) * RadFracDirect;
 		rswrbc += (rswrbc_loc2 * CanopyClosureDirect + iswrac * ag * (1.0 - CanopyClosureDirect)) *RadFracDirect;
-		
+
 		// Longwave fluxes (treat as diffuse)
 		rlwrac = rlwrac * CanopyClosureDiffuse + Constants::stefan_boltzmann * eg * Tsfc4 * (1.0-CanopyClosureDiffuse);
 		ilwrbc = ilwrbc * CanopyClosureDiffuse + ilwrac * (1.0 - CanopyClosureDiffuse);
@@ -1557,7 +1557,7 @@ void Canopy::CanopyRadiationOutput(SnowStation& Xdata, const CurrentMeteo& Mdata
 void Canopy::runCanopyModel(CurrentMeteo &Mdata, SnowStation &Xdata, double roughness_length, double height_of_wind_val, const bool& adjust_VW_height)
 {
 	if (Xdata.Cdata.direct_throughfall==1.)
-		throw InvalidArgumentException("Can not use Canopy with CanopyDirectThroughfall == 1", AT);
+		throw InvalidArgumentException("Can not use Canopy with CanopyDirectThroughfall == 1", MetAT);
 
 	const double hs = Xdata.cH - Xdata.Ground;
 	const size_t nE = Xdata.getNumberOfElements();
@@ -1583,7 +1583,7 @@ void Canopy::runCanopyModel(CurrentMeteo &Mdata, SnowStation &Xdata, double roug
 	}
 	Xdata.Cdata.snowfac += Mdata.psum * (1. - Mdata.psum_ph);
 	Xdata.Cdata.rainfac += Mdata.psum * Mdata.psum_ph;
-	
+
 	// 1.1 compute the interception capacity [mm m-2]
 	const double intcapacity = IntCapacity(Mdata, Xdata);
 
@@ -1621,11 +1621,11 @@ void Canopy::runCanopyModel(CurrentMeteo &Mdata, SnowStation &Xdata, double roug
 	const double ground_liquid_precip = Mdata.psum * Mdata.psum_ph - liqmm_interception + liqmm_unload;
 	Mdata.psum = ground_solid_precip + ground_liquid_precip;
 	Mdata.psum_ph = (Mdata.psum>0)? ground_liquid_precip / Mdata.psum : 1.;
-	
+
 	if (Xdata.Cdata.storage>0.) {
 		Xdata.Cdata.liquidfraction = std::max(0.0,std::min(1.0,(oldstorage*Xdata.Cdata.liquidfraction+liqmm_interception)/Xdata.Cdata.storage));
 	}
-	
+
 	// 2.1 prepare for canopy energy balance
 	// Wetfraction update is moved to canopy energy balance loop  - use old value first
 	double wetfrac = Xdata.Cdata.wetfraction;
@@ -1766,7 +1766,7 @@ void Canopy::runCanopyModel(CurrentMeteo &Mdata, SnowStation &Xdata, double roug
 			TT0 = r2 * (ht0 + let0 + HMt0 - rt0) / (rt1 - ht1 -let1 -HMt1);
 			TT1 = -r2 * rt2 /(rt1 - ht1 -let1 -HMt1);
 			Xdata.Cdata.Ttrunk = (ht0 + let0 + HMt0 - rt0) / (rt1 - ht1 -let1 -HMt1) - rt2 /(rt1 - ht1 -let1 -HMt1) * Xdata.Cdata.temp ;
-			
+
 			CanopyEnergyBalance2L(h0, h1, le0, le1, HM0, HM1, TT0, TT1,
 					ce_canopy, ce_condensation,
 					r0, r1, r2, Xdata.Cdata.temp, Xdata.Cdata.Ttrunk, RNCANOPY, HCANOPY, LECANOPY);
@@ -1775,7 +1775,7 @@ void Canopy::runCanopyModel(CurrentMeteo &Mdata, SnowStation &Xdata, double roug
 			//final canopy energy balance
 			TT0 = 0. ;
 			TT1 = 0. ;
-			
+
 			CanopyEnergyBalance(h0, h1, le0, le1, HM0, HM1,
 					ce_canopy, ce_condensation,
 					r0, r1, Xdata.Cdata.temp, RNCANOPY, HCANOPY, LECANOPY);
