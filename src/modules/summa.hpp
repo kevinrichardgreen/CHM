@@ -54,10 +54,19 @@ class summa : public module_base
 REGISTER_MODULE_HPP(summa);
 private:
   double module_variable;
+
+  struct data : public face_info
+  {
+    Summa S;
+  };
+
 public:
   summa(config_file cfg);
   ~summa();
+
+  virtual void init(mesh& domain);
   virtual void run(mesh_elem& face);
+
 };
 
 /**

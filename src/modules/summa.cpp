@@ -28,10 +28,37 @@ summa::summa(config_file cfg)
         : module_base("summa", parallel::data, cfg)
 {
 
+
+}
+
+
+void summa::init(mesh& domain)
+{
+
+#pragma omp parallel for
+  for (size_t i = 0; i < domain->size_faces(); i++)
+  {
+    auto face = domain->face(i);
+
+    // Summa class in third_party/summa/summa_interface.hpp
+    data* d = face->make_module_data<data>(ID);
+    Summa* S = &(d->S);
+
+    // Set up each triangle's data here
+
+
+  }
+
+
 }
 
 void summa::run(mesh_elem& face)
 {
+  // Get the face's data
+  data* d = face->get_module_data<data>(ID);
+  // And pointer to the SUMMA cpp class
+  Summa* S = &(d->S);
+
 
 }
 
