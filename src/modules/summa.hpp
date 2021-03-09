@@ -34,11 +34,13 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include "summa_interface.hpp"
+
 /**
  * \addtogroup modules
  * @{
  * \class summa
- * \brief Template header file for new module implementations
+ * \brief
  *
  *
  * Depends:

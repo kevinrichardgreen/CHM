@@ -47,6 +47,9 @@ add_library(SUMMA OBJECT
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/summa/data_types.f90
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/summa/nrtype.f90
 	)
+target_include_directories(SUMMA INTERFACE
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/summa
+)
 
 
 
