@@ -34,7 +34,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "summa_interface.hpp"
+#include "summa/summa_interface.hpp"
 
 /**
  * \addtogroup modules
