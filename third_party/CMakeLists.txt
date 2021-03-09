@@ -39,6 +39,16 @@ add_library(FSM OBJECT
 	)
 target_compile_options(FSM PRIVATE -std=f2003 -fno-underscoring) # may need to be PUBLIC to work properly
 
+###################################
+add_library(SUMMA OBJECT
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/summa/coupled_em.f90
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/summa/cppwrap_datatypes.f90
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/summa/cppwrap_summa.f90
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/summa/data_types.f90
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/summa/nrtype.f90
+	)
+
+
 
 
 ###################################
@@ -47,6 +57,7 @@ set(THIRD_PARTY_TARGETS
   SNOWPACK
   SNOBAL
   FSM
+  SUMMA
   )
 
 # third party includes in CHM src files to be specified relative to this directory
