@@ -1260,9 +1260,10 @@ void triangulation::determine_local_boundary_faces()
     - Also store boolean value "is_global_boundary"
   */
 
+#ifdef USE_MPI
+
   using th_safe_multicontainer_type = std::vector< std::pair<mesh_elem,bool> >[];
 
-#ifdef USE_MPI
   // Need to ensure we're starting from nothing?
   assert( _boundary_faces.size() == 0 );
 
@@ -1332,7 +1333,7 @@ void triangulation::determine_local_boundary_faces()
   // _comm_world.barrier();
   // exit(0);
 
-#endif
+#endif // USE_MPI
 }
 
 void triangulation::determine_process_ghost_faces_nearest_neighbors()
