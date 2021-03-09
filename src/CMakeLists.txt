@@ -64,6 +64,7 @@ set(MODULE_SRCS
         modules/PBSM3D.cpp
 		modules/snobal.cpp
 		modules/fsm.cpp
+		modules/summa.cpp
 
 
 
